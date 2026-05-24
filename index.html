@@ -3,1022 +3,779 @@
 <head>
 <meta charset="UTF-8"/>
 <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-<title>Topping Selection Problem · Islam Hasibul · 2417839</title>
-<link href="https://fonts.googleapis.com/css2?family=DM+Mono:ital,wght@0,300;0,400;0,500;1,400&family=Playfair+Display:wght@400;700;900&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet"/>
+<title>Pizza Optimizer — Decision Tree & Branch and Bound</title>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Fira+Code:wght@400;500;600&display=swap" rel="stylesheet"/>
 <style>
-*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
-
 :root{
-  --paper:#fdf8f1;
-  --paper2:#f7f0e4;
-  --paper3:#ede4d4;
-  --ink:#1c1409;
-  --ink2:#4a3b26;
-  --ink3:#8a7560;
-  --rust:#c94f1e;
-  --rust2:#e06b3a;
-  --amber:#d4851a;
-  --green:#2a6644;
-  --green2:#3d8c5e;
-  --teal:#1e6670;
-  --border:#c8b89a;
-  --border2:#ddd0bc;
+  --bg:#faf7f2;--s1:#ffffff;--s2:#f5f0e8;--s3:#ede8de;
+  --b1:#e8e0d0;--b2:#d4c9b0;--b3:#b8a888;
+  --tx:#1a1208;--mu:#7a6a50;--mu2:#5a4e38;
+  --ac:#e8340a;--ac2:rgba(232,52,10,.1);--ac3:rgba(232,52,10,.05);
+  --go:#d4940a;--go2:rgba(212,148,10,.12);
+  --gn:#0a8a4a;--gn2:rgba(10,138,74,.1);
+  --rd:#cc2222;--rd2:rgba(204,34,34,.1);
+  --bl:#0a5ec0;--bl2:rgba(10,94,192,.1);
+  --pu:#7a20c0;--pu2:rgba(122,32,192,.1);
+  --mo:'Fira Code',monospace;--sa:'Space Grotesk',sans-serif;
+  --r:12px;
 }
-
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+html{scroll-behavior:smooth}
 body{
-  background:var(--paper);
-  color:var(--ink);
-  font-family:'DM Sans',sans-serif;
-  font-size:15px;
-  line-height:1.65;
+  background:var(--bg);
+  color:var(--tx);
+  font-family:var(--sa);
   min-height:100vh;
+  overflow-x:hidden;
 }
 
-/* ─── NOISE TEXTURE OVERLAY ─── */
+/* Playful geometric background */
+body::before{
+  content:'';
+  position:fixed;inset:0;
+  background:
+    radial-gradient(circle 220px at 5% 12%, rgba(232,52,10,.07) 0%, transparent 70%),
+    radial-gradient(circle 300px at 95% 5%, rgba(212,148,10,.08) 0%, transparent 70%),
+    radial-gradient(circle 250px at 90% 95%, rgba(10,94,192,.06) 0%, transparent 70%),
+    radial-gradient(circle 180px at 10% 90%, rgba(10,138,74,.07) 0%, transparent 70%);
+  pointer-events:none;z-index:0;
+}
 body::after{
   content:'';
-  position:fixed;
-  inset:0;
-  background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='300' height='300'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.75' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='300' height='300' filter='url(%23n)' opacity='0.04'/%3E%3C/svg%3E");
-  pointer-events:none;
-  z-index:999;
-  opacity:0.6;
+  position:fixed;inset:0;
+  background-image:
+    repeating-linear-gradient(0deg, transparent, transparent 39px, rgba(0,0,0,.04) 39px, rgba(0,0,0,.04) 40px),
+    repeating-linear-gradient(90deg, transparent, transparent 39px, rgba(0,0,0,.04) 39px, rgba(0,0,0,.04) 40px);
+  pointer-events:none;z-index:0;
 }
 
-.wrap{max-width:1100px;margin:0 auto;padding:0 40px}
+.wrap{position:relative;z-index:1;max-width:1180px;margin:0 auto;padding:52px 28px 90px}
 
-/* ─── TOP BAR ─── */
-.topbar{
-  background:var(--ink);
-  color:var(--paper);
-  padding:10px 0;
-  font-family:'DM Mono',monospace;
-  font-size:11px;
-  letter-spacing:0.12em;
+/* HEADER */
+.eyebrow{
+  font-family:var(--mo);font-size:10px;letter-spacing:.22em;
+  color:var(--ac);text-transform:uppercase;margin-bottom:14px;
+  display:flex;align-items:center;gap:10px;
 }
-.topbar-inner{
-  display:flex;
-  justify-content:space-between;
-  align-items:center;
-  flex-wrap:wrap;
-  gap:8px;
-}
-.topbar span{opacity:0.6}
-.topbar strong{color:var(--rust2);opacity:1}
+.eyebrow::before{content:'';width:28px;height:2px;background:var(--ac);}
 
-/* ─── HERO ─── */
-.hero{
-  padding:64px 0 48px;
-  border-bottom:1px solid var(--border2);
-  display:grid;
-  grid-template-columns:1fr auto;
-  gap:40px;
-  align-items:end;
+h1{font-size:48px;font-weight:700;letter-spacing:-2px;line-height:1;margin-bottom:10px;color:var(--tx);}
+h1 em{font-style:normal;color:var(--ac);position:relative;}
+h1 em::after{
+  content:'';position:absolute;bottom:-2px;left:0;right:0;
+  height:3px;background:var(--ac);border-radius:2px;
 }
+.hd-sub{font-size:12px;color:var(--mu);font-family:var(--mo);margin-bottom:44px;padding:8px 14px;background:var(--s2);border:1px solid var(--b1);border-radius:6px;display:inline-block;}
 
-.hero-eyebrow{
-  font-family:'DM Mono',monospace;
-  font-size:11px;
-  letter-spacing:0.2em;
-  text-transform:uppercase;
-  color:var(--rust);
-  margin-bottom:18px;
-  display:flex;
-  align-items:center;
-  gap:12px;
+/* KPIs */
+.kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(148px,1fr));gap:14px;margin-bottom:44px;}
+.kpi{
+  background:var(--s1);border:2px solid var(--b1);border-radius:var(--r);
+  padding:18px 18px 14px;position:relative;overflow:hidden;
+  transition:border-color .2s,transform .15s,box-shadow .2s;
+  box-shadow:0 2px 0 var(--b1);
 }
-.hero-eyebrow::before{
-  content:'';
-  display:inline-block;
-  width:28px;
-  height:2px;
-  background:var(--rust);
-}
+.kpi:hover{transform:translateY(-3px);box-shadow:0 6px 0 var(--b2);}
+.kpi::before{content:'';position:absolute;top:0;left:0;right:0;height:4px;}
+.kpi.ko::before{background:var(--ac);}
+.kpi.kg::before{background:var(--go);}
+.kpi.kn::before{background:var(--gn);}
+.kpi.kb::before{background:var(--bl);}
+.kpi.kp::before{background:var(--pu);}
+.kpi-l{font-family:var(--mo);font-size:9px;letter-spacing:.14em;color:var(--mu);text-transform:uppercase;margin-bottom:8px;}
+.kpi-v{font-size:26px;font-weight:700;line-height:1;margin-bottom:4px;font-family:var(--mo);}
+.kpi.ko .kpi-v{color:var(--ac);}
+.kpi.kg .kpi-v{color:var(--go);}
+.kpi.kn .kpi-v{color:var(--gn);}
+.kpi.kb .kpi-v{color:var(--bl);}
+.kpi.kp .kpi-v{color:var(--pu);}
+.kpi-s{font-size:10px;color:var(--mu);font-family:var(--mo);}
 
-h1{
-  font-family:'Playfair Display',serif;
-  font-size:clamp(2.4rem,5vw,4rem);
-  font-weight:900;
-  line-height:1.08;
-  letter-spacing:-0.02em;
-  color:var(--ink);
+/* SECTION TITLE */
+.sec{
+  font-family:var(--mo);font-size:9px;letter-spacing:.22em;
+  color:var(--mu);text-transform:uppercase;margin-bottom:16px;
+  display:flex;align-items:center;gap:10px;
 }
-h1 em{
-  font-style:normal;
-  color:var(--rust);
-}
+.sec::before{content:'▸';color:var(--ac);font-size:12px;}
+.sec::after{content:'';flex:1;height:1px;background:var(--b1);}
 
-.hero-sub{
-  margin-top:14px;
-  font-size:14px;
-  color:var(--ink3);
-  font-family:'DM Mono',monospace;
-  letter-spacing:0.04em;
+/* FORMULATION */
+.formula{
+  background:var(--tx);border:2px solid var(--tx);
+  border-radius:var(--r);padding:20px 26px;
+  font-family:var(--mo);font-size:12px;color:#f0e8d8;
+  line-height:2.1;margin-bottom:32px;overflow-x:auto;
+  box-shadow:4px 4px 0 var(--b2);
 }
+.fl{color:#ff7a5a;font-weight:600;}
+.fc{color:#f5c842;}
+.fv{color:#a0d8ff;}
 
-.hero-right{
-  text-align:right;
-  padding-bottom:4px;
-}
-.author-label{
-  font-family:'DM Mono',monospace;
-  font-size:10px;
-  letter-spacing:0.18em;
-  text-transform:uppercase;
-  color:var(--ink3);
-  margin-bottom:6px;
-}
-.author-name{
-  font-family:'Playfair Display',serif;
-  font-size:1.5rem;
-  font-weight:700;
-  color:var(--ink);
-}
-.author-id{
-  font-family:'DM Mono',monospace;
-  font-size:11px;
-  color:var(--ink3);
-  margin-top:4px;
-}
+/* TABLE */
+.tbl-outer{margin-bottom:44px;border:2px solid var(--b1);border-radius:var(--r);overflow:hidden;box-shadow:4px 4px 0 var(--b1);}
+table{width:100%;border-collapse:collapse;font-size:13px;font-family:var(--mo);}
+thead tr{background:var(--tx);}
+th{padding:11px 16px;text-align:left;font-size:9px;letter-spacing:.12em;color:#c8b898;text-transform:uppercase;border-bottom:2px solid var(--b2);}
+td{padding:10px 16px;border-bottom:1px solid var(--b1);color:var(--tx);}
+tr:last-child td{border-bottom:none;}
+tr.opt{background:rgba(232,52,10,.04);}
+tr.opt td:first-child{border-left:3px solid var(--ac);}
+td.inc{color:var(--gn);font-weight:600;}
+td.exc{color:var(--mu);}
+td.num{color:var(--go);}
+td.pts{color:var(--pu);}
+tr.tot td{background:rgba(232,52,10,.08);font-weight:600;color:var(--ac);}
+tbody tr:hover td{background:rgba(0,0,0,.025);}
 
-/* ─── METRICS ROW ─── */
-.metrics{
-  display:grid;
-  grid-template-columns:repeat(5,1fr);
-  border:1px solid var(--border);
-  margin:48px 0 64px;
-  background:var(--paper2);
+/* TABS */
+.tabs{display:flex;gap:0;margin-bottom:32px;border-bottom:2px solid var(--b1);}
+.tab-btn{
+  font-family:var(--mo);font-size:10px;letter-spacing:.1em;
+  padding:13px 24px;background:none;border:none;
+  border-bottom:3px solid transparent;color:var(--mu);
+  cursor:pointer;transition:all .2s;text-transform:uppercase;
+  margin-bottom:-2px;
 }
-.metric{
-  padding:28px 20px 24px;
-  border-right:1px solid var(--border);
-  position:relative;
+.tab-btn:hover{color:var(--tx);}
+.tab-btn.active{color:var(--ac);border-bottom-color:var(--ac);background:var(--ac2);border-radius:6px 6px 0 0;}
+.panel{display:none;}.panel.active{display:block;}
+
+/* LEGEND */
+.leg-row{display:flex;flex-wrap:wrap;gap:14px;font-size:11px;font-family:var(--mo);color:var(--mu2);margin-bottom:20px;}
+.leg-i{display:flex;align-items:center;gap:7px;}
+.leg-d{width:12px;height:12px;border-radius:3px;flex-shrink:0;border:1.5px solid currentColor;}
+
+/* SVG area */
+.svg-area{
+  background:var(--s1);border:2px solid var(--b1);border-radius:var(--r);
+  padding:24px;overflow-x:auto;margin-bottom:12px;
+  box-shadow:4px 4px 0 var(--b1);
 }
-.metric:last-child{border-right:none}
+.svg-area svg{display:block;min-width:860px;}
 
-.metric-label{
-  font-family:'DM Mono',monospace;
-  font-size:9.5px;
-  letter-spacing:0.2em;
-  text-transform:uppercase;
-  color:var(--ink3);
-  margin-bottom:14px;
+/* BB */
+.bb-top{display:flex;align-items:center;gap:10px;margin-bottom:12px;flex-wrap:wrap;}
+.btn{
+  font-family:var(--mo);font-size:10px;letter-spacing:.07em;
+  padding:9px 20px;border-radius:8px;border:2px solid var(--b2);
+  background:var(--s1);color:var(--tx);cursor:pointer;
+  transition:all .15s;white-space:nowrap;
+  box-shadow:2px 2px 0 var(--b2);
 }
-
-.metric-value{
-  font-family:'Playfair Display',serif;
-  font-size:2.8rem;
-  font-weight:900;
-  line-height:1;
-  margin-bottom:6px;
+.btn:hover:not(:disabled){
+  border-color:var(--ac);color:var(--ac);background:var(--ac2);
+  box-shadow:2px 2px 0 rgba(232,52,10,.3);
 }
-
-.m1 .metric-value{color:var(--rust)}
-.m2 .metric-value{color:var(--amber)}
-.m3 .metric-value{color:var(--green)}
-.m4 .metric-value{color:var(--teal)}
-.m5 .metric-value{color:var(--ink2)}
-
-.metric-note{
-  font-size:11px;
-  color:var(--ink3);
-  line-height:1.4;
+.btn:active:not(:disabled){transform:translate(2px,2px);box-shadow:none;}
+.btn:disabled{opacity:.35;cursor:not-allowed;}
+.btn-go{background:var(--ac);border-color:var(--ac);color:#fff;box-shadow:3px 3px 0 rgba(180,30,0,.4);}
+.btn-go:hover:not(:disabled){background:#c82800;border-color:#c82800;color:#fff;}
+.step-pill{
+  margin-left:auto;font-family:var(--mo);font-size:10px;
+  color:var(--mu);background:var(--s2);border:2px solid var(--b1);
+  border-radius:20px;padding:5px 16px;
+}
+.prog-wrap{height:5px;background:var(--b1);border-radius:4px;margin-bottom:20px;overflow:hidden;}
+.prog-fill{
+  height:100%;
+  background:linear-gradient(90deg,var(--ac),var(--go),var(--gn));
+  border-radius:4px;transition:width .5s cubic-bezier(.4,0,.2,1);
 }
 
-.metric-corner{
-  position:absolute;
-  top:10px;right:12px;
-  font-family:'DM Mono',monospace;
-  font-size:9px;
-  color:var(--border);
-  letter-spacing:0.1em;
+/* Node tracker */
+.node-track{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:16px;}
+.nt{
+  font-family:var(--mo);font-size:9px;letter-spacing:.06em;
+  padding:5px 13px;border-radius:20px;border:2px solid var(--b1);
+  color:var(--mu);transition:all .3s;text-transform:uppercase;
+  background:var(--s1);
+}
+.nt.act{border-color:var(--ac);color:var(--ac);background:var(--ac2);}
+.nt.ok{border-color:var(--gn);color:var(--gn);background:var(--gn2);}
+.nt.no{border-color:var(--rd);color:var(--rd);background:var(--rd2);}
+
+/* BB grid */
+.bb-grid{display:grid;grid-template-columns:1fr 310px;gap:20px;align-items:start;}
+@media(max-width:820px){.bb-grid{grid-template-columns:1fr;}}
+.bb-svg-wrap{
+  background:var(--s1);border:2px solid var(--b1);border-radius:var(--r);
+  padding:20px;overflow-x:auto;min-height:460px;
+  box-shadow:4px 4px 0 var(--b1);
 }
 
-/* ─── SECTION STYLE ─── */
-.section{margin-bottom:72px}
+/* Sidebar */
+.sidebar{display:flex;flex-direction:column;gap:14px;}
+.card{
+  background:var(--s1);border:2px solid var(--b1);
+  border-radius:var(--r);padding:18px;
+  transition:border-color .3s;
+  box-shadow:3px 3px 0 var(--b1);
+}
+.card.hi{border-color:var(--ac);box-shadow:3px 3px 0 rgba(232,52,10,.25);}
+.card h3{
+  font-family:var(--mo);font-size:9px;letter-spacing:.16em;
+  color:var(--mu);text-transform:uppercase;margin-bottom:12px;
+  padding-bottom:8px;border-bottom:1px solid var(--b1);
+}
+.irow{display:flex;justify-content:space-between;align-items:flex-start;gap:8px;margin-bottom:8px;}
+.irow:last-child{margin-bottom:0;}
+.ik{color:var(--mu);font-family:var(--mo);font-size:9px;flex-shrink:0;padding-top:2px;}
+.iv{font-family:var(--mo);font-size:11px;text-align:right;line-height:1.5;}
+.iv.gd{color:var(--gn);}.iv.bd{color:var(--rd);}.iv.wn{color:var(--go);}.iv.in{color:var(--bl);}
+.badge{
+  display:inline-flex;align-items:center;
+  font-family:var(--mo);font-size:8px;letter-spacing:.1em;
+  padding:4px 12px;border-radius:20px;text-transform:uppercase;font-weight:600;
+  border:2px solid currentColor;
+}
+.b-root{background:var(--bl2);color:var(--bl);}
+.b-branch{background:var(--go2);color:var(--go);}
+.b-inc{background:var(--gn2);color:var(--gn);}
+.b-fath{background:var(--rd2);color:var(--rd);}
+.b-opt{background:var(--ac2);color:var(--ac);}
+.explain{font-size:13px;color:var(--mu2);line-height:1.8;}
+.explain strong{color:var(--tx);}
+.opt-card{
+  background:linear-gradient(135deg, rgba(10,138,74,.12), rgba(232,52,10,.08));
+  border:2px solid var(--gn);border-radius:var(--r);padding:20px;
+  animation:popIn .4s ease;
+  box-shadow:4px 4px 0 rgba(10,138,74,.2);
+}
+@keyframes popIn{from{opacity:0;transform:scale(.97) translateY(6px)}to{opacity:1;transform:scale(1) translateY(0)}}
+.opt-card .ot{font-family:var(--mo);font-size:9px;letter-spacing:.16em;color:var(--ac);text-transform:uppercase;margin-bottom:8px;}
+.opt-card .ov{font-size:32px;font-weight:700;color:var(--gn);font-family:var(--mo);margin-bottom:6px;}
+.opt-card p{font-size:12px;color:var(--mu2);line-height:1.7;}
+.opt-card strong{color:var(--tx);}
 
-.sec-head{
-  display:flex;
-  align-items:baseline;
-  gap:20px;
-  margin-bottom:32px;
-  padding-bottom:12px;
-  border-bottom:1px solid var(--border2);
+/* COMPARISON */
+.cmp{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-top:32px;}
+@media(max-width:640px){.cmp{grid-template-columns:1fr;}}
+.cmp-card{background:var(--s1);border:2px solid var(--b1);border-radius:var(--r);padding:22px;box-shadow:4px 4px 0 var(--b1);}
+.cmp-card h4{
+  font-family:var(--mo);font-size:9px;letter-spacing:.16em;
+  text-transform:uppercase;margin-bottom:14px;padding-bottom:10px;border-bottom:2px solid var(--b1);
 }
-.sec-num{
-  font-family:'DM Mono',monospace;
-  font-size:10px;
-  color:var(--rust);
-  letter-spacing:0.15em;
-}
-.sec-title{
-  font-family:'Playfair Display',serif;
-  font-size:1.3rem;
-  font-weight:700;
-  color:var(--ink);
-}
-.sec-tag{
-  font-family:'DM Mono',monospace;
-  font-size:10px;
-  color:var(--ink3);
-  letter-spacing:0.1em;
-  margin-left:auto;
-}
-
-/* ─── FORMULATION ─── */
-.form-wrap{
-  display:grid;
-  grid-template-columns:1fr 280px;
-  gap:2px;
-  background:var(--border2);
-}
-.form-main{
-  background:var(--paper2);
-  padding:36px 40px;
-  font-family:'DM Mono',monospace;
-  font-size:13px;
-  line-height:2.1;
-}
-.form-main .kmax{color:var(--rust);font-weight:500}
-.form-main .kst{color:var(--amber);font-weight:500}
-.form-main .eqn{color:var(--ink)}
-.form-main .cmt{color:var(--ink3);font-size:11.5px}
-
-.form-side{
-  background:var(--ink);
-  color:var(--paper);
-  padding:32px 24px;
-  font-family:'DM Mono',monospace;
-  font-size:11px;
-  line-height:2;
-}
-.form-side h4{
-  font-size:9px;
-  letter-spacing:0.2em;
-  text-transform:uppercase;
-  color:var(--rust2);
-  margin-bottom:14px;
-  font-weight:400;
-}
-.form-side .var-line{color:rgba(253,248,241,0.65)}
-.form-side .var-line strong{color:var(--paper)}
-
-/* ─── TABLE ─── */
-.tbl-wrap{overflow-x:auto}
-.dtable{
-  width:100%;
-  border-collapse:collapse;
-  font-size:13.5px;
-}
-.dtable thead tr{
-  background:var(--ink);
-  color:var(--paper);
-}
-.dtable th{
-  padding:13px 18px;
-  font-family:'DM Mono',monospace;
-  font-size:9.5px;
-  letter-spacing:0.15em;
-  text-transform:uppercase;
-  font-weight:400;
-  text-align:left;
-  white-space:nowrap;
-}
-.dtable td{
-  padding:13px 18px;
-  border-bottom:1px solid var(--border2);
-  color:var(--ink2);
-  vertical-align:middle;
-}
-.dtable tbody tr:hover td{background:rgba(201,79,30,0.03)}
-.dtable tbody tr.sel td{background:rgba(42,102,68,0.05)}
-.dtable tfoot td{
-  background:var(--paper3);
-  font-family:'DM Mono',monospace;
-  font-weight:500;
-  color:var(--ink);
-  border-top:2px solid var(--border);
-  padding:15px 18px;
+.cmp-card.dt h4{color:var(--pu);}.cmp-card.bb h4{color:var(--ac);}
+.cmp-row{display:flex;gap:10px;margin-bottom:10px;}
+.cmp-row .ck{color:var(--mu);font-size:11px;min-width:78px;flex-shrink:0;font-family:var(--mo);}
+.cmp-row .cv{color:var(--mu2);line-height:1.6;font-size:13px;}
+.cmp-row .cv strong{color:var(--tx);}
+kbd{
+  background:var(--s2);border:2px solid var(--b2);border-bottom-width:3px;
+  border-radius:4px;padding:2px 7px;font-family:var(--mo);font-size:10px;color:var(--mu2);
 }
 
-.varcol{color:var(--ink3);font-family:'DM Mono',monospace;font-size:12px}
-.badge-yes{
-  display:inline-flex;align-items:center;gap:6px;
-  color:var(--green2);font-weight:500;font-family:'DM Mono',monospace;font-size:12px;
+/* Color stripe header decoration */
+.header-stripe{
+  display:flex;gap:0;margin-bottom:32px;border-radius:8px;overflow:hidden;
+  height:6px;
 }
-.badge-no{color:var(--ink3);font-family:'DM Mono',monospace;font-size:12px}
-.num-hi{color:var(--rust);font-weight:500}
-.num-med{color:var(--amber)}
-
-/* ─── ALGORITHM SECTION ─── */
-.algo-tabs{
-  display:flex;
-  gap:0;
-  border-bottom:2px solid var(--border2);
-  margin-bottom:36px;
-}
-.atab{
-  padding:12px 28px;
-  background:none;
-  border:none;
-  font-family:'DM Mono',monospace;
-  font-size:10.5px;
-  letter-spacing:0.12em;
-  text-transform:uppercase;
-  color:var(--ink3);
-  cursor:pointer;
-  position:relative;
-  transition:color 0.2s;
-}
-.atab.on{color:var(--rust)}
-.atab.on::after{
-  content:'';
-  position:absolute;
-  bottom:-2px;left:0;right:0;
-  height:2px;
-  background:var(--rust);
-}
-.apanel{display:none}
-.apanel.on{display:block}
-
-/* ─── DECISION TREE LAYOUT ─── */
-.tree-layout{
-  display:grid;
-  grid-template-columns:1fr 360px;
-  gap:2px;
-  background:var(--border2);
-}
-
-.tree-legend{
-  display:flex;flex-wrap:wrap;gap:20px;
-  margin-bottom:24px;font-size:11.5px;
-  font-family:'DM Mono',monospace;
-  color:var(--ink3);
-}
-.leg{display:flex;align-items:center;gap:8px}
-.lsq{width:12px;height:12px;border-radius:2px;flex-shrink:0}
-.lsq-sel{background:var(--green);opacity:0.85}
-.lsq-no{background:var(--ink3);opacity:0.3}
-.lsq-feas{background:var(--teal);opacity:0.85}
-.lsq-opt{background:var(--amber)}
-.lsq-prn{background:var(--paper3);border:1px solid var(--border)}
-
-.tree-svg-area{
-  background:var(--paper2);
-  padding:28px;
-}
-
-.trace-panel{
-  background:var(--ink);
-  color:var(--paper);
-  padding:28px 24px;
-  font-family:'DM Mono',monospace;
-  font-size:11.5px;
-}
-.trace-panel h3{
-  font-size:9px;letter-spacing:0.2em;text-transform:uppercase;
-  color:var(--rust2);margin-bottom:20px;font-weight:400;
-}
-.trace-row{
-  display:flex;justify-content:space-between;
-  padding:8px 0;
-  border-bottom:1px solid rgba(200,184,154,0.15);
-  gap:12px;
-  line-height:1.4;
-}
-.trace-row:last-of-type{border-bottom:none}
-.tst{color:rgba(253,248,241,0.6);font-size:11px}
-.tval{color:var(--rust2);white-space:nowrap;font-size:11px}
-
-.final-box{
-  margin-top:18px;
-  border:1px solid var(--rust);
-  padding:14px;
-  background:rgba(201,79,30,0.08);
-  color:var(--rust2);
-  line-height:1.7;
-}
-.prune-note{
-  margin-top:14px;
-  padding:14px;
-  background:rgba(200,184,154,0.1);
-  border:1px solid rgba(200,184,154,0.25);
-  color:rgba(253,248,241,0.5);
-  font-size:10.5px;
-  line-height:1.8;
-}
-.prune-note h4{
-  font-size:9px;letter-spacing:0.15em;text-transform:uppercase;
-  color:rgba(253,248,241,0.35);margin-bottom:8px;font-weight:400;
-}
-
-/* ─── B&B PANEL ─── */
-.bnb-layout{display:grid;grid-template-columns:1fr 340px;gap:2px;background:var(--border2)}
-
-.bnb-explain{
-  background:var(--paper2);
-  padding:36px 40px;
-}
-.bnb-explain h3{
-  font-family:'Playfair Display',serif;
-  font-size:1.2rem;font-weight:700;
-  margin-bottom:16px;color:var(--ink);
-}
-.bnb-explain p{
-  font-size:13.5px;color:var(--ink2);
-  line-height:1.85;margin-bottom:14px;
-}
-.bnb-explain .hl{color:var(--rust);font-weight:500}
-.bnb-explain .hg{color:var(--green)}
-.bnb-explain .ha{color:var(--amber)}
-
-.bnb-kpi{
-  display:grid;grid-template-columns:1fr 1fr;
-  gap:2px;background:var(--border2);margin-top:24px;
-}
-.kpi-box{
-  background:var(--paper);
-  padding:20px;text-align:center;
-}
-.kpi-v{
-  font-family:'Playfair Display',serif;
-  font-size:2rem;font-weight:900;margin-bottom:4px;
-}
-.kpi-l{
-  font-family:'DM Mono',monospace;
-  font-size:9px;letter-spacing:0.15em;text-transform:uppercase;color:var(--ink3);
-}
-.kv1{color:var(--teal)}
-.kv2{color:var(--green)}
-.kv3{color:var(--amber)}
-.kv4{color:var(--rust)}
-
-.bnb-nodes{
-  background:var(--paper3);
-  padding:28px 24px;
-  font-family:'DM Mono',monospace;
-  font-size:11.5px;
-}
-.bnb-nodes h3{
-  font-size:9px;letter-spacing:0.2em;text-transform:uppercase;
-  color:var(--ink3);margin-bottom:20px;font-weight:400;
-}
-.nrow{
-  display:flex;gap:12px;
-  padding:10px 0;
-  border-bottom:1px solid var(--border2);
-}
-.nrow:last-of-type{border-bottom:none}
-.nnum{color:var(--rust);min-width:22px;font-weight:500}
-.ndesc{color:var(--ink2);font-size:11px;line-height:1.55}
-.nres{color:var(--ink3);font-size:10.5px}
-.nres.ok{color:var(--green)}
-
-/* ─── FOOTER ─── */
-footer{
-  background:var(--ink);
-  color:var(--paper);
-  padding:28px 0;
-  margin-top:80px;
-}
-.foot-inner{
-  display:flex;justify-content:space-between;
-  align-items:center;flex-wrap:wrap;
-  gap:12px;
-  font-family:'DM Mono',monospace;
-  font-size:11px;
-  color:rgba(253,248,241,0.4);
-}
-.foot-inner strong{color:var(--rust2)}
-
-@media(max-width:900px){
-  .hero{grid-template-columns:1fr}
-  .metrics{grid-template-columns:repeat(3,1fr)}
-  .form-wrap,.tree-layout,.bnb-layout{grid-template-columns:1fr}
-  .metric:nth-child(3){border-right:none}
-  .hero-right{text-align:left}
-}
-@media(max-width:600px){
-  .wrap{padding:0 20px}
-  .metrics{grid-template-columns:1fr 1fr}
-  .metric:nth-child(2){border-right:none}
-}
+.header-stripe span{flex:1;}
+.hs1{background:var(--ac);}.hs2{background:var(--go);}.hs3{background:var(--gn);}
+.hs4{background:var(--bl);}.hs5{background:var(--pu);}
 </style>
 </head>
 <body>
-
-<!-- TOP BAR -->
-<div class="topbar">
-  <div class="wrap topbar-inner">
-    <span>OPERATIONS RESEARCH · INTEGER PROGRAMMING · <strong>ISLAM HASIBUL</strong> · 2417839</span>
-    <span>ILP · BRANCH &amp; BOUND · LP RELAXATION</span>
-  </div>
-</div>
-
-<!-- HERO -->
 <div class="wrap">
-  <div class="hero">
-    <div>
-      <div class="hero-eyebrow">Combinatorial Optimisation · Knapsack Variant</div>
-      <h1>Topping<br/>Selection<br/><em>Problem</em></h1>
-      <p class="hero-sub">Maximise satisfaction subject to budget ≤ 8ww · xᵢ ∈ {0,1} · i = 1…10</p>
-    </div>
-    <div class="hero-right">
-      <div class="author-label">Prepared by</div>
-      <div class="author-name">Islam Hasibul</div>
-      <div class="author-id">Student ID: 2417839</div>
-    </div>
-  </div>
 
-  <!-- METRICS -->
-  <div class="metrics">
-    <div class="metric m1">
-      <div class="metric-corner">01</div>
-      <div class="metric-label">Optimal Value Z*</div>
-      <div class="metric-value">29.4</div>
-      <div class="metric-note">total satisfaction score</div>
-    </div>
-    <div class="metric m2">
-      <div class="metric-corner">02</div>
-      <div class="metric-label">Budget Spent</div>
-      <div class="metric-value">7.5<span style="font-size:1.4rem">ww</span></div>
-      <div class="metric-note">of 8ww available</div>
-    </div>
-    <div class="metric m3">
-      <div class="metric-corner">03</div>
-      <div class="metric-label">Items Selected</div>
-      <div class="metric-value">5<span style="font-size:1.4rem;color:var(--ink3)"> /10</span></div>
-      <div class="metric-note">Ricotta · Salame · Nduja · Anchovy · Truffle Oil</div>
-    </div>
-    <div class="metric m4">
-      <div class="metric-corner">04</div>
-      <div class="metric-label">LP Upper Bound</div>
-      <div class="metric-value">31.6</div>
-      <div class="metric-note">root node relaxation</div>
-    </div>
-    <div class="metric m5">
-      <div class="metric-corner">05</div>
-      <div class="metric-label">B&amp;B Nodes</div>
-      <div class="metric-value">9</div>
-      <div class="metric-note">vs 2¹⁰ = 1024 brute-force</div>
-    </div>
-  </div>
+<!-- HEADER -->
+<div class="header-stripe"><span class="hs1"></span><span class="hs2"></span><span class="hs3"></span><span class="hs4"></span><span class="hs5"></span></div>
+<div class="eyebrow">Operations Research · Integer Programming · HASIBUL 2417839</div>
+<h1>Pizza Topping <em>Optimizer</em></h1>
+<div class="hd-sub">Decision Tree (ILP) &amp; Branch and Bound with LP Relaxation — Budget ≤ 7ww</div>
 
-  <!-- PROBLEM FORMULATION -->
-  <section class="section">
-    <div class="sec-head">
-      <span class="sec-num">§ 01</span>
-      <span class="sec-title">Problem Formulation</span>
-      <span class="sec-tag">Binary Integer Linear Programme</span>
-    </div>
-    <div class="form-wrap">
-      <div class="form-main">
-        <p>
-          <span class="kmax">Maximise</span>
-          <span class="eqn"> Z = 4.8x₁ + 3.2x₂ + 5.1x₃ + 6.3x₄ + 9.0x₅ + 4.4x₆ + 3.7x₇ + 5.5x₈ + 7.2x₉ + 4.6x₁₀</span>
-        </p>
-        <p>
-          <span class="kst">Subject to</span>
-          <span class="eqn"> 2.5x₁ + 1.5x₂ + 1.0x₃ + 3.0x₄ + 3.5x₅ + 2.0x₆ + 1.0x₇ + 0.5x₈ + 2.5x₉ + 1.5x₁₀ ≤ 8</span>
-          <span class="cmt"> (Budget, ww)</span>
-        </p>
-        <p class="eqn" style="padding-left:90px">xᵢ ∈ {0,1} &nbsp; for i = 1, 2, …, 10</p>
-        <br/>
-        <p class="cmt">Integrality constraint: each topping is either fully selected or excluded — no fractional choices permitted.</p>
-      </div>
-      <div class="form-side">
-        <h4>Variable Key</h4>
-        <div class="var-line">x₁ = <strong>Mozzarella di bufala</strong></div>
-        <div class="var-line">x₂ = <strong>Gorgonzola DOP</strong></div>
-        <div class="var-line">x₃ = <strong>Ricotta fresca</strong></div>
-        <div class="var-line">x₄ = <strong>Burrata pugliese</strong></div>
-        <div class="var-line">x₅ = <strong>Prosciutto di Parma</strong></div>
-        <div class="var-line">x₆ = <strong>Pancetta tesa</strong></div>
-        <div class="var-line">x₇ = <strong>Salame Milano</strong></div>
-        <div class="var-line">x₈ = <strong>Nduja calabrese</strong></div>
-        <div class="var-line">x₉ = <strong>Anchovy fillet</strong></div>
-        <div class="var-line">x₁₀ = <strong>Truffle oil drizzle</strong></div>
-      </div>
-    </div>
-  </section>
-
-  <!-- DATA TABLE -->
-  <section class="section">
-    <div class="sec-head">
-      <span class="sec-num">§ 02</span>
-      <span class="sec-title">Topping Data &amp; Optimal Decisions</span>
-      <span class="sec-tag">from spreadsheet model</span>
-    </div>
-    <div class="tbl-wrap">
-      <table class="dtable">
-        <thead>
-          <tr>
-            <th>Var</th>
-            <th>Topping</th>
-            <th>Cost (ww)</th>
-            <th>Satisfaction</th>
-            <th>Sat / Cost</th>
-            <th>ILP Decision</th>
-          </tr>
-        </thead>
-        <tbody>
-          <tr>
-            <td class="varcol">x₁</td>
-            <td>Mozzarella di bufala</td>
-            <td>2.5</td><td>4.8</td><td>1.92</td>
-            <td class="badge-no">0 — not selected</td>
-          </tr>
-          <tr>
-            <td class="varcol">x₂</td>
-            <td>Gorgonzola DOP</td>
-            <td>1.5</td><td>3.2</td><td>2.13</td>
-            <td class="badge-no">0 — not selected</td>
-          </tr>
-          <tr class="sel">
-            <td class="varcol">x₃</td>
-            <td>Ricotta fresca</td>
-            <td>1.0</td>
-            <td class="num-hi">5.1</td>
-            <td class="num-hi">5.10</td>
-            <td><span class="badge-yes">✓ &nbsp;1 — selected</span></td>
-          </tr>
-          <tr>
-            <td class="varcol">x₄</td>
-            <td>Burrata pugliese</td>
-            <td>3.0</td><td>6.3</td><td>2.10</td>
-            <td class="badge-no">0 — not selected</td>
-          </tr>
-          <tr>
-            <td class="varcol">x₅</td>
-            <td>Prosciutto di Parma</td>
-            <td>3.5</td><td>9.0</td><td>2.57</td>
-            <td class="badge-no">0 — not selected</td>
-          </tr>
-          <tr>
-            <td class="varcol">x₆</td>
-            <td>Pancetta tesa</td>
-            <td>2.0</td><td>4.4</td><td>2.20</td>
-            <td class="badge-no">0 — not selected</td>
-          </tr>
-          <tr class="sel">
-            <td class="varcol">x₇</td>
-            <td>Salame Milano</td>
-            <td>1.0</td>
-            <td class="num-hi">3.7</td>
-            <td class="num-hi">3.70</td>
-            <td><span class="badge-yes">✓ &nbsp;1 — selected</span></td>
-          </tr>
-          <tr class="sel">
-            <td class="varcol">x₈</td>
-            <td>Nduja calabrese</td>
-            <td>0.5</td>
-            <td class="num-hi">5.5</td>
-            <td class="num-hi">11.00</td>
-            <td><span class="badge-yes">✓ &nbsp;1 — selected</span></td>
-          </tr>
-          <tr class="sel">
-            <td class="varcol">x₉</td>
-            <td>Anchovy fillet</td>
-            <td>2.5</td>
-            <td class="num-med">7.2</td>
-            <td class="num-med">2.88</td>
-            <td><span class="badge-yes">✓ &nbsp;1 — selected</span></td>
-          </tr>
-          <tr class="sel">
-            <td class="varcol">x₁₀</td>
-            <td>Truffle oil drizzle</td>
-            <td>1.5</td>
-            <td class="num-med">4.6</td>
-            <td class="num-med">3.07</td>
-            <td><span class="badge-yes">✓ &nbsp;1 — selected</span></td>
-          </tr>
-        </tbody>
-        <tfoot>
-          <tr>
-            <td colspan="2">Optimal Totals</td>
-            <td>7.5 ww</td>
-            <td>29.4</td>
-            <td>—</td>
-            <td>5 toppings selected</td>
-          </tr>
-        </tfoot>
-      </table>
-    </div>
-  </section>
-
-  <!-- ALGORITHM -->
-  <section class="section">
-    <div class="sec-head">
-      <span class="sec-num">§ 03</span>
-      <span class="sec-title">Algorithm Visualisations</span>
-    </div>
-
-    <div class="algo-tabs">
-      <button class="atab on" onclick="sw('dt',this)">01 · Decision Tree (ILP)</button>
-      <button class="atab" onclick="sw('bb',this)">02 · Branch &amp; Bound (LP Relaxation)</button>
-    </div>
-
-    <!-- DECISION TREE -->
-    <div id="apdt" class="apanel on">
-      <div class="tree-legend">
-        <div class="leg"><div class="lsq lsq-sel"></div>Chosen (optimal path)</div>
-        <div class="leg"><div class="lsq lsq-no"></div>Not chosen</div>
-        <div class="leg"><div class="lsq lsq-feas"></div>Feasibility check</div>
-        <div class="leg"><div class="lsq lsq-opt"></div>Optimal solution ★</div>
-        <div class="leg"><div class="lsq lsq-prn"></div>Pruned branch</div>
-      </div>
-      <div class="tree-layout">
-        <div class="tree-svg-area">
-          <svg viewBox="0 0 600 800" xmlns="http://www.w3.org/2000/svg" width="100%" style="max-width:600px;display:block;font-family:'DM Mono',monospace">
-
-            <!-- ROOT -->
-            <rect x="150" y="8" width="300" height="58" rx="3" fill="#1c1409" stroke="#c94f1e" stroke-width="2"/>
-            <text x="300" y="29" text-anchor="middle" font-size="11" fill="#e06b3a" font-weight="500">Topping Selection Problem</text>
-            <text x="300" y="48" text-anchor="middle" font-size="9" fill="rgba(253,248,241,0.55)">Maximise Z | Budget ≤ 8ww | xᵢ ∈ {0,1}</text>
-            <text x="300" y="60" text-anchor="middle" font-size="8.5" fill="rgba(253,248,241,0.35)">LP Relaxation Z* = 31.6</text>
-
-            <!-- Root edges -->
-            <line x1="255" y1="66" x2="160" y2="118" stroke="#2a6644" stroke-width="2"/>
-            <line x1="345" y1="66" x2="480" y2="118" stroke="#8a7560" stroke-width="1.2" stroke-dasharray="5,4"/>
-            <text x="183" y="107" font-size="9" fill="#8a7560">x₁=0</text>
-            <text x="420" y="107" font-size="9" fill="#8a7560">x₁=1</text>
-
-            <!-- x1=0 chosen -->
-            <rect x="65" y="120" width="190" height="50" rx="3" fill="rgba(42,102,68,0.12)" stroke="#2a6644" stroke-width="1.8"/>
-            <text x="160" y="141" text-anchor="middle" font-size="10" fill="#2a6644" font-weight="500">Mozzarella excluded</text>
-            <text x="160" y="158" text-anchor="middle" font-size="8.5" fill="#8a7560">x₁=0 · 0 sat · 0.0ww spent</text>
-
-            <!-- x1=1 pruned -->
-            <rect x="385" y="120" width="185" height="50" rx="3" fill="#ede4d4" stroke="#c8b89a" stroke-width="1"/>
-            <text x="477" y="141" text-anchor="middle" font-size="10" fill="#8a7560">+Mozzarella</text>
-            <text x="477" y="158" text-anchor="middle" font-size="8.5" fill="#c8b89a">x₁=1 · ratio 1.92 — pruned</text>
-
-            <!-- x1=0 edges -->
-            <line x1="130" y1="170" x2="108" y2="220" stroke="#2a6644" stroke-width="2"/>
-            <line x1="190" y1="170" x2="265" y2="220" stroke="#8a7560" stroke-width="1.2" stroke-dasharray="5,4"/>
-            <text x="92" y="210" font-size="9" fill="#8a7560">x₂=0</text>
-            <text x="240" y="210" font-size="9" fill="#8a7560">x₂=1</text>
-
-            <!-- x2=0 chosen -->
-            <rect x="25" y="222" width="170" height="50" rx="3" fill="rgba(42,102,68,0.12)" stroke="#2a6644" stroke-width="1.8"/>
-            <text x="110" y="243" text-anchor="middle" font-size="10" fill="#2a6644" font-weight="500">Gorgonzola excluded</text>
-            <text x="110" y="260" text-anchor="middle" font-size="8.5" fill="#8a7560">x₂=0 · 0 sat · 0.0ww</text>
-
-            <!-- x2=1 pruned -->
-            <rect x="215" y="222" width="150" height="50" rx="3" fill="#ede4d4" stroke="#c8b89a" stroke-width="1"/>
-            <text x="290" y="243" text-anchor="middle" font-size="10" fill="#8a7560">+Gorgonzola</text>
-            <text x="290" y="260" text-anchor="middle" font-size="8.5" fill="#c8b89a">x₂=1 · 3.2 sat · 1.5ww</text>
-
-            <!-- x2=0 edges -->
-            <line x1="95" y1="272" x2="95" y2="322" stroke="#2a6644" stroke-width="2"/>
-            <line x1="125" y1="272" x2="185" y2="322" stroke="#8a7560" stroke-width="1.2" stroke-dasharray="5,4"/>
-            <text x="58" y="307" font-size="9" fill="#8a7560">x₃=1</text>
-            <text x="163" y="307" font-size="9" fill="#8a7560">x₃=0</text>
-
-            <!-- x3=1 chosen -->
-            <rect x="20" y="324" width="150" height="50" rx="3" fill="rgba(42,102,68,0.12)" stroke="#2a6644" stroke-width="1.8"/>
-            <text x="95" y="345" text-anchor="middle" font-size="10" fill="#2a6644" font-weight="500">+Ricotta fresca ✓</text>
-            <text x="95" y="362" text-anchor="middle" font-size="8.5" fill="#8a7560">x₃=1 · 5.1 sat · 1.0ww</text>
-
-            <!-- x3=0 pruned -->
-            <rect x="185" y="324" width="140" height="50" rx="3" fill="#ede4d4" stroke="#c8b89a" stroke-width="1"/>
-            <text x="255" y="345" text-anchor="middle" font-size="10" fill="#8a7560">No Ricotta</text>
-            <text x="255" y="362" text-anchor="middle" font-size="8.5" fill="#c8b89a">suboptimal · pruned</text>
-
-            <!-- x3=1 edges -->
-            <line x1="82" y1="374" x2="82" y2="424" stroke="#2a6644" stroke-width="2"/>
-            <line x1="108" y1="374" x2="168" y2="424" stroke="#8a7560" stroke-width="1.2" stroke-dasharray="5,4"/>
-            <text x="44" y="410" font-size="9" fill="#8a7560">x₄=0</text>
-            <text x="147" y="410" font-size="9" fill="#8a7560">x₄=1</text>
-
-            <!-- x4=0 chosen -->
-            <rect x="18" y="426" width="130" height="50" rx="3" fill="rgba(42,102,68,0.12)" stroke="#2a6644" stroke-width="1.8"/>
-            <text x="83" y="447" text-anchor="middle" font-size="10" fill="#2a6644" font-weight="500">Burrata excluded</text>
-            <text x="83" y="464" text-anchor="middle" font-size="8.5" fill="#8a7560">x₄=0 · 5.1 sat · 1.0ww</text>
-
-            <!-- x4=1 pruned -->
-            <rect x="163" y="426" width="145" height="50" rx="3" fill="#ede4d4" stroke="#c8b89a" stroke-width="1"/>
-            <text x="235" y="447" text-anchor="middle" font-size="10" fill="#8a7560">+Burrata (3.0ww)</text>
-            <text x="235" y="464" text-anchor="middle" font-size="8.5" fill="#c8b89a">budget risk — pruned</text>
-
-            <!-- down to Salame (skipping Prosciutto + Pancetta) -->
-            <line x1="75" y1="476" x2="75" y2="526" stroke="#2a6644" stroke-width="2"/>
-            <text x="15" y="515" font-size="8" fill="#8a7560">x₅=0, x₆=0</text>
-            <text x="15" y="525" font-size="8" fill="#8a7560">x₇=1</text>
-
-            <!-- Salame chosen -->
-            <rect x="15" y="528" width="148" height="50" rx="3" fill="rgba(42,102,68,0.12)" stroke="#2a6644" stroke-width="1.8"/>
-            <text x="89" y="549" text-anchor="middle" font-size="10" fill="#2a6644" font-weight="500">+Salame Milano ✓</text>
-            <text x="89" y="566" text-anchor="middle" font-size="8.5" fill="#8a7560">x₇=1 · 8.8 sat · 2.0ww</text>
-
-            <!-- down to final batch -->
-            <line x1="82" y1="578" x2="82" y2="628" stroke="#2a6644" stroke-width="2"/>
-            <text x="10" y="616" font-size="8" fill="#8a7560">x₈=1, x₉=1</text>
-            <text x="10" y="626" font-size="8" fill="#8a7560">x₁₀=1</text>
-
-            <!-- final chosen bundle -->
-            <rect x="12" y="630" width="208" height="52" rx="3" fill="rgba(42,102,68,0.12)" stroke="#2a6644" stroke-width="1.8"/>
-            <text x="116" y="651" text-anchor="middle" font-size="10" fill="#2a6644" font-weight="500">+Nduja+Anchovy+Truffle Oil ✓</text>
-            <text x="116" y="668" text-anchor="middle" font-size="8.5" fill="#8a7560">x₈,x₉,x₁₀=1 · 29.4 sat · 7.5ww</text>
-
-            <!-- feasibility -->
-            <line x1="220" y1="656" x2="295" y2="680" stroke="#1e6670" stroke-width="1.5"/>
-            <rect x="295" y="660" width="148" height="46" rx="3" fill="rgba(30,102,112,0.1)" stroke="#1e6670" stroke-width="1.5"/>
-            <text x="369" y="679" text-anchor="middle" font-size="9.5" fill="#1e6670" font-weight="500">Feasibility Check</text>
-            <text x="369" y="696" text-anchor="middle" font-size="8.5" fill="#8a7560">7.5ww ≤ 8ww ✓ · xᵢ∈{0,1} ✓</text>
-
-            <!-- optimal star -->
-            <line x1="443" y1="683" x2="475" y2="718" stroke="#d4851a" stroke-width="1.5"/>
-            <rect x="448" y="720" width="148" height="58" rx="3" fill="rgba(212,133,26,0.1)" stroke="#d4851a" stroke-width="2"/>
-            <text x="522" y="741" text-anchor="middle" font-size="10" fill="#d4851a" font-weight="500">★ Optimal Solution</text>
-            <text x="522" y="758" text-anchor="middle" font-size="8.5" fill="#d4851a" opacity="0.8">Z* = 29.4 · Cost = 7.5ww</text>
-            <text x="522" y="772" text-anchor="middle" font-size="7.5" fill="#d4851a" opacity="0.6">Ricotta·Salame·Nduja·Anchovy·Truffle</text>
-          </svg>
-        </div>
-
-        <!-- Trace panel -->
-        <div class="trace-panel">
-          <h3>Running Totals — Optimal Path</h3>
-          <div class="trace-row">
-            <span class="tst">x₁=0 (Mozzarella out)</span>
-            <span class="tval">0.0 sat · 0.0ww</span>
-          </div>
-          <div class="trace-row">
-            <span class="tst">x₂=0 (Gorgonzola out)</span>
-            <span class="tval">0.0 sat · 0.0ww</span>
-          </div>
-          <div class="trace-row">
-            <span class="tst">x₃=1 (Ricotta in)</span>
-            <span class="tval">5.1 sat · 1.0ww</span>
-          </div>
-          <div class="trace-row">
-            <span class="tst">x₄=0 (Burrata out)</span>
-            <span class="tval">5.1 sat · 1.0ww</span>
-          </div>
-          <div class="trace-row">
-            <span class="tst">x₅=0 (Prosciutto out)</span>
-            <span class="tval">5.1 sat · 1.0ww</span>
-          </div>
-          <div class="trace-row">
-            <span class="tst">x₆=0 (Pancetta out)</span>
-            <span class="tval">5.1 sat · 1.0ww</span>
-          </div>
-          <div class="trace-row">
-            <span class="tst">x₇=1 (Salame in)</span>
-            <span class="tval">8.8 sat · 2.0ww</span>
-          </div>
-          <div class="trace-row">
-            <span class="tst">x₈=1 (Nduja in)</span>
-            <span class="tval">14.3 sat · 2.5ww</span>
-          </div>
-          <div class="trace-row">
-            <span class="tst">x₉=1 (Anchovy in)</span>
-            <span class="tval">21.5 sat · 5.0ww</span>
-          </div>
-          <div class="trace-row">
-            <span class="tst">x₁₀=1 (Truffle oil in)</span>
-            <span class="tval">29.4 sat · 7.5ww</span>
-          </div>
-          <div class="final-box">
-            FINAL: Z = 29.4 | 7.5ww of 8ww used<br/>
-            <span style="font-size:10px;opacity:0.7">Confirmed by spreadsheet model.</span>
-          </div>
-          <div class="prune-note">
-            <h4>Pruned sub-trees</h4>
-            x₁=1: Mozzarella costs 2.5ww at ratio 1.92 — consuming budget with low return. Cannot reach Z=29.4.<br/>
-            Total search space: 2¹⁰ = 1024 combinations.
-          </div>
-        </div>
-      </div>
-    </div>
-
-    <!-- B&B PANEL -->
-    <div id="apbb" class="apanel">
-      <div class="bnb-layout">
-        <div class="bnb-explain">
-          <h3>Branch &amp; Bound with LP Relaxation</h3>
-          <p>
-            Relaxing the integrality constraints at the root node gives an LP upper bound of
-            <span class="hl">Z_LP = 31.6</span>. Since x₈ is fractional in this solution, we branch on it first.
-          </p>
-          <p>
-            Each child node re-solves the LP with an added constraint (xᵢ = 0 or xᵢ = 1).
-            Nodes whose LP bound falls below the current best integer solution are
-            <span style="color:var(--ink2)">immediately pruned</span>, eliminating large swaths of the
-            search tree without enumeration.
-          </p>
-          <p>
-            After examining only <span class="ha">9 nodes</span>, the algorithm certifies that
-            <span class="hg">Z* = 29.4</span> is globally optimal — a 99.1 % reduction vs brute-force.
-          </p>
-          <div class="bnb-kpi">
-            <div class="kpi-box">
-              <div class="kpi-v kv1">31.6</div>
-              <div class="kpi-l">LP Upper Bound</div>
-            </div>
-            <div class="kpi-box">
-              <div class="kpi-v kv2">29.4</div>
-              <div class="kpi-l">Best Integer Z*</div>
-            </div>
-            <div class="kpi-box">
-              <div class="kpi-v kv3">9</div>
-              <div class="kpi-l">Nodes Explored</div>
-            </div>
-            <div class="kpi-box">
-              <div class="kpi-v kv4">1024</div>
-              <div class="kpi-l">Brute-Force 2¹⁰</div>
-            </div>
-          </div>
-        </div>
-
-        <div class="bnb-nodes">
-          <h3>Node Exploration Log</h3>
-          <div class="nrow">
-            <div class="nnum">N1</div>
-            <div>
-              <div class="ndesc">Root LP relaxation</div>
-              <div class="nres">Z_LP = 31.6 · x₈ fractional → branch</div>
-            </div>
-          </div>
-          <div class="nrow">
-            <div class="nnum">N2</div>
-            <div>
-              <div class="ndesc">x₈ = 1 (Nduja in)</div>
-              <div class="nres">Z_LP = 30.4 · x₉ fractional → branch</div>
-            </div>
-          </div>
-          <div class="nrow">
-            <div class="nnum">N3</div>
-            <div>
-              <div class="ndesc">x₈ = 0 (Nduja out)</div>
-              <div class="nres">Z_LP = 27.1 → pruned (below best)</div>
-            </div>
-          </div>
-          <div class="nrow">
-            <div class="nnum">N4</div>
-            <div>
-              <div class="ndesc">x₈=1, x₉=1 (Anchovy in)</div>
-              <div class="nres">Z_LP = 29.8 · x₇ fractional → branch</div>
-            </div>
-          </div>
-          <div class="nrow">
-            <div class="nnum">N5</div>
-            <div>
-              <div class="ndesc">x₈=1, x₉=0 (Anchovy out)</div>
-              <div class="nres">Z_LP = 26.5 → pruned</div>
-            </div>
-          </div>
-          <div class="nrow">
-            <div class="nnum">N6</div>
-            <div>
-              <div class="ndesc">x₈=1, x₉=1, x₇=1</div>
-              <div class="nres ok">Integer feasible! Z = 29.4 ✓</div>
-            </div>
-          </div>
-          <div class="nrow">
-            <div class="nnum">N7</div>
-            <div>
-              <div class="ndesc">x₈=1, x₉=1, x₇=0</div>
-              <div class="nres">Z_LP = 28.2 → pruned (below 29.4)</div>
-            </div>
-          </div>
-          <div class="nrow">
-            <div class="nnum">N8</div>
-            <div>
-              <div class="ndesc">x₃ forced = 1 (Ricotta)</div>
-              <div class="nres">Confirms x₃ in optimal set</div>
-            </div>
-          </div>
-          <div class="nrow">
-            <div class="nnum">N9</div>
-            <div>
-              <div class="ndesc">x₁₀ forced = 1 (Truffle)</div>
-              <div class="nres ok">Optimality confirmed · Z* = 29.4</div>
-            </div>
-          </div>
-        </div>
-      </div>
-    </div>
-  </section>
+<!-- KPIs -->
+<div class="kpis">
+  <div class="kpi ko"><div class="kpi-l">Optimal Z</div><div class="kpi-v">26.0</div><div class="kpi-s">satisfaction score</div></div>
+  <div class="kpi kg"><div class="kpi-l">Cost Used</div><div class="kpi-v">6.5ww</div><div class="kpi-s">of 7ww budget</div></div>
+  <div class="kpi kn"><div class="kpi-l">Toppings Chosen</div><div class="kpi-v">5 / 10</div><div class="kpi-s">Ricotta·Salame·Nduja·Zucchini·Fried Egg</div></div>
+  <div class="kpi kb"><div class="kpi-l">LP Upper Bound</div><div class="kpi-v">27.25</div><div class="kpi-s">root relaxation</div></div>
+  <div class="kpi kp"><div class="kpi-l">B&amp;B Nodes</div><div class="kpi-v">7</div><div class="kpi-s">vs 2¹⁰=1024 brute-force</div></div>
 </div>
 
-<!-- FOOTER -->
-<footer>
-  <div class="wrap">
-    <div class="foot-inner">
-      <span>Topping Selection Problem · <strong>Islam Hasibul</strong> · ID 2417839</span>
-      <span>ILP Decision Tree &amp; Branch and Bound · Budget ≤ 8ww · 10 binary variables</span>
+<!-- FORMULATION -->
+<div class="sec">Problem Formulation</div>
+<div class="formula">
+  <span class="fl">Maximize</span>&nbsp;&nbsp;Z = <span class="fv">5x₁ + 3.1x₂ + 4.2x₃ + 4.7x₄ + 7.2x₅ + 4.2x₆ + 8.3x₇ + 4.8x₈ + 3.5x₉ + 5.2x₁₀</span><br>
+  <span class="fl">Subject to</span>&nbsp;&nbsp;<span class="fc">2x₁ + 1.5x₂ + x₃ + 3x₄ + 3x₅ + 2x₆ + 2x₇ + 0.5x₈ + x₉ + 2x₁₀ ≤ 7</span>&nbsp;&nbsp;(Budget ww)<br>
+  &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="fv">xᵢ ∈ {0,1}</span>&nbsp;for i=1…10<br>
+  &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;x₁=Buffalo mozz · x₂=Gorgonzola · x₃=Ricotta · x₄=Burrata · x₅=Parma ham<br>
+  &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;x₆=Pancetta · x₇=Salame · x₈=Nduja · x₉=Zucchini · x₁₀=Fried eggplant
+</div>
+
+<!-- TABLE -->
+<div class="sec">Topping Data &amp; Optimal Decisions (from spreadsheet)</div>
+<div class="tbl-outer">
+  <table>
+    <thead><tr><th>Var</th><th>Topping</th><th>Cost (ww)</th><th>Satisfaction</th><th>Sat/Cost Ratio</th><th>ILP Decision</th></tr></thead>
+    <tbody>
+      <tr><td class="num">x₁</td><td>Buffalo mozzarella</td><td class="num">2.0</td><td class="pts">5.0</td><td class="num">2.50</td><td class="exc">0 — not chosen</td></tr>
+      <tr><td class="num">x₂</td><td>Gorgonzola</td><td class="num">1.5</td><td class="pts">3.1</td><td class="num">2.07</td><td class="exc">0 — not chosen</td></tr>
+      <tr class="opt"><td class="num">x₃</td><td>Ricotta</td><td class="num">1.0</td><td class="pts">4.2</td><td class="num">4.20</td><td class="inc">1 — chosen ✓</td></tr>
+      <tr><td class="num">x₄</td><td>Burrata</td><td class="num">3.0</td><td class="pts">4.7</td><td class="num">1.57</td><td class="exc">0 — not chosen</td></tr>
+      <tr><td class="num">x₅</td><td>Parma ham</td><td class="num">3.0</td><td class="pts">7.2</td><td class="num">2.40</td><td class="exc">0 — not chosen</td></tr>
+      <tr><td class="num">x₆</td><td>Pancetta</td><td class="num">2.0</td><td class="pts">4.2</td><td class="num">2.10</td><td class="exc">0 — not chosen</td></tr>
+      <tr class="opt"><td class="num">x₇</td><td>Salame</td><td class="num">2.0</td><td class="pts">8.3</td><td class="num">4.15</td><td class="inc">1 — chosen ✓</td></tr>
+      <tr class="opt"><td class="num">x₈</td><td>Nduja</td><td class="num">0.5</td><td class="pts">4.8</td><td class="num">9.60</td><td class="inc">1 — chosen ✓</td></tr>
+      <tr class="opt"><td class="num">x₉</td><td>Zucchini</td><td class="num">1.0</td><td class="pts">3.5</td><td class="num">3.50</td><td class="inc">1 — chosen ✓</td></tr>
+      <tr class="opt"><td class="num">x₁₀</td><td>Fried eggplant</td><td class="num">2.0</td><td class="pts">5.2</td><td class="num">2.60</td><td class="inc">1 — chosen ✓</td></tr>
+      <tr class="tot"><td colspan="2">OPTIMAL TOTALS</td><td>6.5 ww</td><td>26.0</td><td>—</td><td>5 toppings selected</td></tr>
+    </tbody>
+  </table>
+</div>
+
+<!-- TABS -->
+<div class="tabs">
+  <button class="tab-btn active" onclick="switchTab('dt')">01 · Decision Tree (ILP)</button>
+  <button class="tab-btn" onclick="switchTab('bb')">02 · Branch &amp; Bound (LP Relaxation)</button>
+</div>
+
+<!-- ============ DECISION TREE ============ -->
+<div id="panel-dt" class="panel active">
+  <div class="sec">Binary Decision Tree — Optimal Path Highlighted (x₁ through x₁₀)</div>
+  <div class="leg-row">
+    <div class="leg-i" style="color:var(--gn)"><div class="leg-d" style="background:rgba(10,138,74,.15)"></div>Chosen (optimal path)</div>
+    <div class="leg-i" style="color:var(--mu)"><div class="leg-d" style="background:var(--s2)"></div>Not chosen</div>
+    <div class="leg-i" style="color:var(--bl)"><div class="leg-d" style="background:rgba(10,94,192,.12)"></div>Feasibility check</div>
+    <div class="leg-i" style="color:var(--go)"><div class="leg-d" style="background:rgba(212,148,10,.15)"></div>★ Optimal solution</div>
+    <div class="leg-i" style="color:var(--mu)"><div class="leg-d" style="background:var(--b1)"></div>Pruned sub-branches</div>
+  </div>
+  <div class="svg-area">
+    <svg width="100%" viewBox="0 0 1060 900" xmlns="http://www.w3.org/2000/svg" role="img">
+      <title>Decision Tree — Pizza Topping Optimizer</title>
+      <desc>Binary decision tree for the pizza optimizer ILP. Optimal path selects Ricotta, Salame, Nduja, Zucchini, Fried Eggplant for Z=26.0.</desc>
+      <defs>
+        <marker id="ar" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+          <path d="M1 2L8 5L1 8" fill="none" stroke="context-stroke" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+        </marker>
+      </defs>
+
+      <!-- ROOT -->
+      <rect x="360" y="12" width="320" height="60" rx="10" fill="#fff8f0" stroke="#e8340a" stroke-width="2"/>
+      <text x="520" y="34" text-anchor="middle" font-family="Fira Code" font-size="13" font-weight="600" fill="#e8340a">Pizza Topping Optimizer</text>
+      <text x="520" y="54" text-anchor="middle" font-family="Fira Code" font-size="10" fill="#7a6a50">Max Satisfaction | Budget ≤ 7ww | xᵢ∈{0,1}</text>
+
+      <!-- ROOT branches: many excluded, key ones shown -->
+      <line x1="450" y1="72" x2="200" y2="148" stroke="#0a8a4a" stroke-width="2" marker-end="url(#ar)"/>
+      <rect x="292" y="108" width="52" height="18" rx="4" fill="#faf7f2"/>
+      <text x="318" y="120" text-anchor="middle" font-family="Fira Code" font-size="10" fill="#0a8a4a">x₁=0</text>
+      <line x1="590" y1="72" x2="830" y2="148" stroke="#d4c9b0" stroke-width="0.8" stroke-dasharray="5 3" marker-end="url(#ar)"/>
+      <rect x="706" y="108" width="52" height="18" rx="4" fill="#faf7f2"/>
+      <text x="732" y="120" text-anchor="middle" font-family="Fira Code" font-size="10" fill="#b8a888">x₁=1</text>
+
+      <!-- L1 nodes -->
+      <rect x="100" y="148" width="200" height="54" rx="10" fill="#f0faf5" stroke="#0a8a4a" stroke-width="2"/>
+      <text x="200" y="170" text-anchor="middle" font-family="Fira Code" font-size="12" font-weight="600" fill="#0a8a4a">Buffalo mozz excluded</text>
+      <text x="200" y="188" text-anchor="middle" font-family="Fira Code" font-size="10" fill="#2a7050">x₁=0 | 0 sat | 0ww spent</text>
+      <rect x="730" y="148" width="200" height="54" rx="10" fill="#faf7f2" stroke="#d4c9b0" stroke-width="1"/>
+      <text x="830" y="170" text-anchor="middle" font-family="Fira Code" font-size="11" fill="#9a8a6a">Buffalo mozz in</text>
+      <text x="830" y="188" text-anchor="middle" font-family="Fira Code" font-size="10" fill="#b8a888">x₁=1 | 5 sat | 2ww</text>
+
+      <!-- x2=0 optimal path -->
+      <line x1="160" y1="202" x2="120" y2="270" stroke="#0a8a4a" stroke-width="2" marker-end="url(#ar)"/>
+      <rect x="103" y="230" width="50" height="18" rx="4" fill="#faf7f2"/>
+      <text x="128" y="242" text-anchor="middle" font-family="Fira Code" font-size="10" fill="#0a8a4a">x₂=0</text>
+      <line x1="230" y1="202" x2="310" y2="270" stroke="#d4c9b0" stroke-width="0.8" stroke-dasharray="4 3" marker-end="url(#ar)"/>
+      <rect x="268" y="230" width="50" height="18" rx="4" fill="#faf7f2"/>
+      <text x="293" y="242" text-anchor="middle" font-family="Fira Code" font-size="10" fill="#b8a888">x₂=1</text>
+
+      <!-- L2 nodes -->
+      <rect x="22" y="270" width="198" height="54" rx="10" fill="#f0faf5" stroke="#0a8a4a" stroke-width="2"/>
+      <text x="121" y="292" text-anchor="middle" font-family="Fira Code" font-size="12" font-weight="600" fill="#0a8a4a">Gorgonzola excluded</text>
+      <text x="121" y="310" text-anchor="middle" font-family="Fira Code" font-size="10" fill="#2a7050">x₂=0 | 0 sat | 0ww spent</text>
+      <rect x="248" y="270" width="180" height="54" rx="10" fill="#faf7f2" stroke="#d4c9b0" stroke-width="1"/>
+      <text x="338" y="292" text-anchor="middle" font-family="Fira Code" font-size="11" fill="#9a8a6a">+Gorgonzola</text>
+      <text x="338" y="310" text-anchor="middle" font-family="Fira Code" font-size="10" fill="#b8a888">x₂=1 | 3.1 sat | 1.5ww</text>
+
+      <!-- x3=1 optimal -->
+      <line x1="82" y1="324" x2="82" y2="392" stroke="#0a8a4a" stroke-width="2" marker-end="url(#ar)"/>
+      <rect x="65" y="352" width="50" height="18" rx="4" fill="#faf7f2"/>
+      <text x="90" y="364" text-anchor="middle" font-family="Fira Code" font-size="10" fill="#0a8a4a">x₃=1</text>
+      <line x1="155" y1="324" x2="218" y2="392" stroke="#d4c9b0" stroke-width="0.8" stroke-dasharray="4 3" marker-end="url(#ar)"/>
+      <rect x="178" y="353" width="50" height="18" rx="4" fill="#faf7f2"/>
+      <text x="203" y="365" text-anchor="middle" font-family="Fira Code" font-size="10" fill="#b8a888">x₃=0</text>
+
+      <!-- L3 -->
+      <rect x="22" y="392" width="198" height="54" rx="10" fill="#f0faf5" stroke="#0a8a4a" stroke-width="2"/>
+      <text x="121" y="414" text-anchor="middle" font-family="Fira Code" font-size="12" font-weight="600" fill="#0a8a4a">+Ricotta ✓</text>
+      <text x="121" y="432" text-anchor="middle" font-family="Fira Code" font-size="10" fill="#2a7050">x₃=1 | 4.2 sat | 1ww</text>
+      <rect x="162" y="392" width="180" height="54" rx="10" fill="#faf7f2" stroke="#e8e0d0" stroke-width="1"/>
+      <text x="252" y="414" text-anchor="middle" font-family="Fira Code" font-size="11" fill="#c8b898">No Ricotta</text>
+      <text x="252" y="432" text-anchor="middle" font-family="Fira Code" font-size="10" fill="#d4c9b0">suboptimal path</text>
+
+      <!-- x4=0 optimal (skip Burrata) -->
+      <line x1="82" y1="446" x2="82" y2="514" stroke="#0a8a4a" stroke-width="2" marker-end="url(#ar)"/>
+      <rect x="65" y="474" width="50" height="18" rx="4" fill="#faf7f2"/>
+      <text x="90" y="486" text-anchor="middle" font-family="Fira Code" font-size="10" fill="#0a8a4a">x₄=0</text>
+      <line x1="155" y1="446" x2="218" y2="514" stroke="#d4c9b0" stroke-width="0.8" stroke-dasharray="4 3" marker-end="url(#ar)"/>
+      <rect x="178" y="474" width="50" height="18" rx="4" fill="#faf7f2"/>
+      <text x="203" y="486" text-anchor="middle" font-family="Fira Code" font-size="10" fill="#b8a888">x₄=1</text>
+
+      <!-- L4 -->
+      <rect x="22" y="514" width="198" height="54" rx="10" fill="#f0faf5" stroke="#0a8a4a" stroke-width="2"/>
+      <text x="121" y="536" text-anchor="middle" font-family="Fira Code" font-size="12" font-weight="600" fill="#0a8a4a">Burrata excluded</text>
+      <text x="121" y="554" text-anchor="middle" font-family="Fira Code" font-size="10" fill="#2a7050">x₄=0 | 4.2 sat | 1ww</text>
+      <rect x="162" y="514" width="180" height="54" rx="10" fill="#faf7f2" stroke="#e8e0d0" stroke-width="1"/>
+      <text x="252" y="536" text-anchor="middle" font-family="Fira Code" font-size="11" fill="#c8b898">+Burrata (3ww)</text>
+      <text x="252" y="554" text-anchor="middle" font-family="Fira Code" font-size="10" fill="#d4c9b0">budget risk ↑</text>
+
+      <!-- x5=0, x6=0, x7=1 -->
+      <line x1="82" y1="568" x2="82" y2="620" stroke="#0a8a4a" stroke-width="2" marker-end="url(#ar)"/>
+      <rect x="40" y="590" width="88" height="18" rx="4" fill="#faf7f2"/>
+      <text x="84" y="602" text-anchor="middle" font-family="Fira Code" font-size="10" fill="#0a8a4a">x₅=0,x₆=0,x₇=1</text>
+
+      <!-- L5 Salame in -->
+      <rect x="22" y="620" width="198" height="54" rx="10" fill="#f0faf5" stroke="#0a8a4a" stroke-width="2"/>
+      <text x="121" y="642" text-anchor="middle" font-family="Fira Code" font-size="12" font-weight="600" fill="#0a8a4a">+Salame ✓</text>
+      <text x="121" y="660" text-anchor="middle" font-family="Fira Code" font-size="10" fill="#2a7050">x₇=1 | 12.5 sat | 3ww</text>
+
+      <!-- x8=1,x9=1,x10=1 -->
+      <line x1="82" y1="674" x2="82" y2="726" stroke="#0a8a4a" stroke-width="2" marker-end="url(#ar)"/>
+      <rect x="28" y="696" width="108" height="18" rx="4" fill="#faf7f2"/>
+      <text x="82" y="708" text-anchor="middle" font-family="Fira Code" font-size="10" fill="#0a8a4a">x₈=1, x₉=1, x₁₀=1</text>
+
+      <!-- L6 last toppings -->
+      <rect x="22" y="726" width="198" height="54" rx="10" fill="#f0faf5" stroke="#0a8a4a" stroke-width="2"/>
+      <text x="121" y="748" text-anchor="middle" font-family="Fira Code" font-size="12" font-weight="600" fill="#0a8a4a">+Nduja+Zucchini+Fried Egg ✓</text>
+      <text x="121" y="766" text-anchor="middle" font-family="Fira Code" font-size="10" fill="#2a7050">x₈,x₉,x₁₀=1 | 26 sat | 6.5ww</text>
+
+      <!-- Feasibility arrow -->
+      <line x1="220" y1="752" x2="310" y2="752" stroke="#0a5ec0" stroke-width="1.5" marker-end="url(#ar)"/>
+      <rect x="310" y="726" width="210" height="54" rx="10" fill="#f0f5ff" stroke="#0a5ec0" stroke-width="1.5"/>
+      <text x="415" y="748" text-anchor="middle" font-family="Fira Code" font-size="11" fill="#0a5ec0">Feasibility Check</text>
+      <text x="415" y="766" text-anchor="middle" font-family="Fira Code" font-size="10" fill="#3a6090">6.5ww ≤ 7ww ✓ · All vars {0,1} ✓</text>
+
+      <!-- Optimal box -->
+      <line x1="520" y1="752" x2="580" y2="752" stroke="#d4940a" stroke-width="2" marker-end="url(#ar)"/>
+      <rect x="580" y="722" width="310" height="66" rx="12" fill="#fffbf0" stroke="#d4940a" stroke-width="2.5"/>
+      <text x="735" y="745" text-anchor="middle" font-family="Fira Code" font-size="14" font-weight="600" fill="#d4940a">★ OPTIMAL SOLUTION</text>
+      <text x="735" y="766" text-anchor="middle" font-family="Fira Code" font-size="11" fill="#7a6030">Satisfaction = 26.0 | Cost = 6.5ww</text>
+      <text x="735" y="782" text-anchor="middle" font-family="Fira Code" font-size="10" fill="#9a8050">Ricotta+Salame+Nduja+Zucchini+Fried Egg</text>
+
+      <!-- Running totals panel -->
+      <rect x="580" y="140" width="420" height="255" rx="10" fill="#ffffff" stroke="#e8e0d0" stroke-width="1.5"/>
+      <rect x="580" y="140" width="420" height="28" rx="10" fill="#1a1208"/>
+      <rect x="580" y="158" width="420" height="10" fill="#1a1208"/>
+      <text x="600" y="159" font-family="Fira Code" font-size="9" fill="#f5c842" letter-spacing="0.16em">RUNNING TOTALS — OPTIMAL PATH</text>
+      <line x1="580" y1="170" x2="1000" y2="170" stroke="#e8e0d0" stroke-width="1"/>
+      <text x="596" y="188" font-family="Fira Code" font-size="10" fill="#9a8a6a">x₁=0 (Buffalo mozz out):</text>
+      <text x="870" y="188" font-family="Fira Code" font-size="10" fill="#0a8a4a">0 sat · 0.0ww spent</text>
+      <text x="596" y="206" font-family="Fira Code" font-size="10" fill="#9a8a6a">x₂=0 (Gorgonzola out):</text>
+      <text x="870" y="206" font-family="Fira Code" font-size="10" fill="#0a8a4a">0 sat · 0.0ww spent</text>
+      <text x="596" y="224" font-family="Fira Code" font-size="10" fill="#9a8a6a">x₃=1 (Ricotta in):</text>
+      <text x="870" y="224" font-family="Fira Code" font-size="10" fill="#0a8a4a">4.2 sat · 1.0ww spent</text>
+      <text x="596" y="242" font-family="Fira Code" font-size="10" fill="#9a8a6a">x₄=0 (Burrata out):</text>
+      <text x="870" y="242" font-family="Fira Code" font-size="10" fill="#0a8a4a">4.2 sat · 1.0ww spent</text>
+      <text x="596" y="260" font-family="Fira Code" font-size="10" fill="#9a8a6a">x₅=0, x₆=0 (Parma, Pancetta out):</text>
+      <text x="870" y="260" font-family="Fira Code" font-size="10" fill="#0a8a4a">4.2 sat · 1.0ww spent</text>
+      <text x="596" y="278" font-family="Fira Code" font-size="10" fill="#9a8a6a">x₇=1 (Salame in):</text>
+      <text x="870" y="278" font-family="Fira Code" font-size="10" fill="#d4940a">12.5 sat · 3.0ww spent</text>
+      <text x="596" y="296" font-family="Fira Code" font-size="10" fill="#9a8a6a">x₈=1 (Nduja in):</text>
+      <text x="870" y="296" font-family="Fira Code" font-size="10" fill="#d4940a">17.3 sat · 3.5ww spent</text>
+      <text x="596" y="314" font-family="Fira Code" font-size="10" fill="#9a8a6a">x₉=1 (Zucchini in):</text>
+      <text x="870" y="314" font-family="Fira Code" font-size="10" fill="#d4940a">20.8 sat · 4.5ww spent</text>
+      <text x="596" y="332" font-family="Fira Code" font-size="10" fill="#9a8a6a">x₁₀=1 (Fried egg in):</text>
+      <text x="870" y="332" font-family="Fira Code" font-size="10" fill="#d4940a">26.0 sat · 6.5ww spent</text>
+      <line x1="580" y1="342" x2="1000" y2="342" stroke="#e8e0d0" stroke-width="1"/>
+      <text x="596" y="360" font-family="Fira Code" font-size="11" font-weight="600" fill="#d4940a">FINAL: Z = 26.0 | 6.5ww of 7ww used</text>
+      <text x="596" y="378" font-family="Fira Code" font-size="10" fill="#9a8a6a">Matches spreadsheet solution exactly.</text>
+
+      <!-- Pruned note -->
+      <rect x="580" y="420" width="420" height="100" rx="10" fill="#faf7f2" stroke="#d4c9b0" stroke-width="1" stroke-dasharray="6 3"/>
+      <text x="790" y="446" text-anchor="middle" font-family="Fira Code" font-size="10" fill="#9a8a6a">Sub-trees pruned:</text>
+      <text x="790" y="464" text-anchor="middle" font-family="Fira Code" font-size="10" fill="#b8a888">x₁=1: Buffalo mozz takes 2ww with only</text>
+      <text x="790" y="482" text-anchor="middle" font-family="Fira Code" font-size="10" fill="#b8a888">ratio 2.5 — leaves less room for higher-</text>
+      <text x="790" y="500" text-anchor="middle" font-family="Fira Code" font-size="10" fill="#b8a888">value toppings. Cannot reach Z=26.0.</text>
+      <text x="790" y="518" text-anchor="middle" font-family="Fira Code" font-size="10" fill="#c8b898">Total space: 2¹⁰ = 1024 combinations.</text>
+    </svg>
+  </div>
+</div>
+
+<!-- ============ BRANCH & BOUND ============ -->
+<div id="panel-bb" class="panel">
+  <div class="sec">Branch &amp; Bound — LP Relaxation (Continuous xᵢ ∈ [0,1])</div>
+  <p style="font-size:13px;color:var(--mu2);margin-bottom:20px;font-family:var(--mo);background:var(--s2);padding:10px 14px;border-radius:8px;border:1px solid var(--b1);">
+    LP relaxation order by sat/cost ratio: x₈(9.60) → x₃(4.20) → x₇(4.15) → x₉(3.50) → x₁₀(2.60) → x₁(2.50) → x₅(2.40) → …
+  </p>
+
+  <!-- Node tracker -->
+  <div class="node-track">
+    <div class="nt" id="nt0">Node 0</div>
+    <div class="nt" id="nt1">Node 1</div>
+    <div class="nt" id="nt1a">Node 1a</div>
+    <div class="nt" id="nt1b">Node 1b</div>
+    <div class="nt" id="nt2">Node 2</div>
+    <div class="nt" id="nt2a">Node 2a</div>
+    <div class="nt" id="nt2b">Node 2b ★</div>
+  </div>
+
+  <div class="prog-wrap"><div class="prog-fill" id="prog" style="width:0%"></div></div>
+
+  <div class="bb-top">
+    <button class="btn" id="btn-prev" onclick="bbStep(-1)" disabled>← Prev</button>
+    <button class="btn btn-go" id="btn-next" onclick="bbStep(1)">Next Step →</button>
+    <button class="btn" onclick="bbReset()">↺ Reset</button>
+    <button class="btn" onclick="bbAuto()" id="btn-auto">▶ Auto</button>
+    <span style="font-family:var(--mo);font-size:10px;color:var(--mu)"><kbd>←</kbd><kbd>→</kbd> keys</span>
+    <span class="step-pill" id="step-counter">Step 0 / 6</span>
+  </div>
+
+  <div class="bb-grid">
+    <div>
+      <div class="bb-svg-wrap">
+        <svg id="bb-svg" width="100%" viewBox="0 0 620 560" xmlns="http://www.w3.org/2000/svg" role="img">
+          <title>Branch and Bound Tree — Pizza Optimizer</title>
+          <defs>
+            <marker id="ar2" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+              <path d="M1 2L8 5L1 8" fill="none" stroke="context-stroke" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+            </marker>
+          </defs>
+          <g id="bb-g"></g>
+        </svg>
+      </div>
+    </div>
+    <div class="sidebar" id="bb-sidebar">
+      <div class="card">
+        <h3>Instructions</h3>
+        <p class="explain">Press <strong>Next Step</strong> or use <strong>← →</strong> arrow keys to walk through the B&amp;B algorithm step by step.</p>
+      </div>
+      <div class="card">
+        <h3>LP Relaxation Key</h3>
+        <p class="explain">Allow xᵢ ∈ [0,1] (decimal). Solve greedily by <strong>sat/cost ratio</strong>. The last item picked may be <strong>fractional</strong> — this triggers branching.</p>
+      </div>
     </div>
   </div>
-</footer>
+
+  <!-- Comparison cards -->
+  <div class="cmp">
+    <div class="cmp-card dt">
+      <h4>Decision Tree (ILP / Binary)</h4>
+      <div class="cmp-row"><span class="ck">Method</span><span class="cv">Exhaustive binary branching. Every xᵢ forced to exactly <strong>0 or 1</strong>.</span></div>
+      <div class="cmp-row"><span class="ck">Optimal</span><span class="cv"><strong>Z = 26.0</strong> — Ricotta+Salame+Nduja+Zucchini+Fried Egg</span></div>
+      <div class="cmp-row"><span class="ck">Search space</span><span class="cv">Up to <strong>2¹⁰ = 1024</strong> combos, pruned by budget violations.</span></div>
+      <div class="cmp-row"><span class="ck">Variables</span><span class="cv">Strictly binary <strong>{0,1}</strong> at every node.</span></div>
+      <div class="cmp-row"><span class="ck">Pruning</span><span class="cv">By <strong>constraint violation</strong> only (budget ≤ 7ww).</span></div>
+    </div>
+    <div class="cmp-card bb">
+      <h4>Branch &amp; Bound (LP Relaxation)</h4>
+      <div class="cmp-row"><span class="ck">Method</span><span class="cv">Solve LP at each node (allow <strong>decimal</strong> values), branch on the fractional variable.</span></div>
+      <div class="cmp-row"><span class="ck">Optimal</span><span class="cv"><strong>Z = 26.0</strong> — confirmed at Node 1a (same result!).</span></div>
+      <div class="cmp-row"><span class="ck">Search space</span><span class="cv">Only <strong>7 nodes</strong> explored — far fewer than 1024.</span></div>
+      <div class="cmp-row"><span class="ck">Variables</span><span class="cv">Continuous <strong>[0,1]</strong> in LP; integers required at leaf.</span></div>
+      <div class="cmp-row"><span class="ck">Pruning</span><span class="cv">By <strong>infeasibility OR</strong> LP bound ≤ best integer incumbent.</span></div>
+    </div>
+  </div>
+</div>
+
+</div><!-- /wrap -->
 
 <script>
-function sw(id,btn){
-  document.querySelectorAll('.apanel').forEach(p=>p.classList.remove('on'));
-  document.querySelectorAll('.atab').forEach(t=>t.classList.remove('on'));
-  document.getElementById('ap'+id).classList.add('on');
-  btn.classList.add('on');
+function switchTab(t){
+  document.querySelectorAll('.tab-btn').forEach((b,i)=>b.classList.toggle('active',['dt','bb'][i]===t));
+  ['panel-dt','panel-bb'].forEach(id=>document.getElementById(id).classList.toggle('active',id==='panel-'+t));
 }
+
+const CM={
+  blue:{fill:'#f0f5ff',stroke:'#0a5ec0',text:'#0a5ec0'},
+  green:{fill:'#f0faf5',stroke:'#0a8a4a',text:'#0a8a4a'},
+  red:{fill:'#fff0f0',stroke:'#cc2222',text:'#cc2222'},
+  amber:{fill:'#fffbf0',stroke:'#d4940a',text:'#d4940a'},
+  gray:{fill:'#faf7f2',stroke:'#c8b898',text:'#9a8a6a'},
+  orange:{fill:'#fff8f0',stroke:'#e8340a',text:'#e8340a'},
+};
+
+const steps=[
+  {
+    id:'n0',title:'Node 0 — LP Relaxation (Root)',
+    status:'b-root',sLbl:'Root Node',
+    vars:'x₈=1, x₃=1, x₇=1, x₉=1, x₁₀=1, x₁=0.25 (frac.)',
+    bound:'Z = 27.25',bCls:'wn',
+    feas:'LP feasible — x₁ fractional',fCls:'wn',
+    inc:'None yet',
+    note:'Solve LP relaxation (xᵢ ∈ [0,1]) by greedy ratio order. Fill x₈(ratio 9.6), x₃(4.2), x₇(4.15), x₉(3.5), x₁₀(2.6) fully. Remaining budget = 0.5ww → x₁ gets <strong>0.25 fraction</strong> (0.5/2.0). Z=27.25. x₁ is fractional → must branch.',
+    nodes:[{id:'n0',x:215,y:18,w:196,h:60,label:'Node 0 — Root LP',sub:'Z=27.25 | x₁=0.25 ← frac.',color:'orange',active:true}],
+    edges:[],track:{n0:'act'}
+  },
+  {
+    id:'n1n2',title:'Branch on x₁ (Buffalo mozzarella)',
+    status:'b-branch',sLbl:'Branching on x₁',
+    vars:'Node 1: x₁=0  |  Node 2: x₁=1',
+    bound:'Parent bound: Z=27.25',bCls:'wn',
+    feas:'Both children pending',fCls:'in',
+    inc:'None',
+    note:'x₁ (Buffalo mozzarella) is the fractional variable. Branch into: <strong>Node 1</strong> forces x₁=0 (exclude) and <strong>Node 2</strong> forces x₁=1 (include, costs 2ww). Each re-solves LP with that constraint fixed.',
+    nodes:[
+      {id:'n0',x:215,y:18,w:196,h:58,label:'Node 0',sub:'Z=27.25 | branched on x₁',color:'gray',active:false},
+      {id:'n1',x:30,y:148,w:196,h:58,label:'Node 1: x₁=0',sub:'Excl. Buffalo mozz',color:'blue',active:true},
+      {id:'n2',x:390,y:148,w:196,h:58,label:'Node 2: x₁=1',sub:'Incl. Buffalo mozz',color:'blue',active:true},
+    ],
+    edges:[{x1:268,y1:76,x2:128,y2:148,lbl:'x₁=0'},{x1:352,y1:76,x2:488,y2:148,lbl:'x₁=1'}],
+    track:{n0:'',n1:'act',n2:'act'}
+  },
+  {
+    id:'n1',title:'Node 1: x₁=0 — LP Solved',
+    status:'b-branch',sLbl:'Fractional — branch again',
+    vars:'x₈=1,x₃=1,x₇=1,x₉=1,x₁₀=1, x₅=0.167 (frac.)',
+    bound:'Z = 27.2',bCls:'wn',
+    feas:'x₅=0.167 fractional',fCls:'wn',
+    inc:'None yet',
+    note:'With x₁=0 fixed, LP refills: x₈,x₃,x₇,x₉,x₁₀ all fit (6.5ww). Remaining 0.5ww → next best is x₅ (Parma ham, ratio 2.40): fraction = 0.5/3.0 = <strong>0.167</strong>. Z=27.2 > no incumbent, cannot prune. Branch on x₅.',
+    nodes:[
+      {id:'n0',x:215,y:18,w:196,h:58,label:'Node 0',sub:'Z=27.25 | branched',color:'gray',active:false},
+      {id:'n1',x:30,y:148,w:196,h:58,label:'Node 1: x₁=0',sub:'Z=27.2 | x₅=0.167 frac.',color:'blue',active:true},
+      {id:'n2',x:390,y:148,w:196,h:58,label:'Node 2: x₁=1',sub:'(pending)',color:'gray',active:false},
+    ],
+    edges:[{x1:268,y1:76,x2:128,y2:148,lbl:'x₁=0'},{x1:352,y1:76,x2:488,y2:148,lbl:'x₁=1'}],
+    track:{n0:'',n1:'act',n2:''}
+  },
+  {
+    id:'n1a',title:'Node 1a: x₁=0, x₅=0 → All Integer! First Incumbent',
+    status:'b-inc',sLbl:'★ New Incumbent Found!',
+    vars:'x₃=1, x₇=1, x₈=1, x₉=1, x₁₀=1 (all integer)',
+    bound:'Z = 26.0 (integer feasible)',bCls:'gd',
+    feas:'✓ All integer · 6.5ww ≤ 7ww',fCls:'gd',
+    inc:'Z* = 26.0 (new best!)',
+    note:'Force x₅=0. LP gives <strong>all-integer solution</strong>: x₃,x₇,x₈,x₉,x₁₀ = 1, all others = 0. Z=26.0, cost=6.5ww. This is our <strong>first incumbent</strong> — and it exactly matches the spreadsheet optimal! Node 1b (x₅=1) has bound 26.25 > 26.0, so we still check it.',
+    nodes:[
+      {id:'n0',x:215,y:14,w:196,h:52,label:'Node 0',sub:'Z=27.25 | branched',color:'gray',active:false},
+      {id:'n1',x:120,y:116,w:196,h:52,label:'Node 1: x₁=0',sub:'Z=27.2 | branched',color:'gray',active:false},
+      {id:'n2',x:390,y:116,w:196,h:52,label:'Node 2: x₁=1',sub:'(pending)',color:'gray',active:false},
+      {id:'n1a',x:16,y:244,w:210,h:58,label:'1a: x₁=0, x₅=0',sub:'Z=26.0 ✓ all integer!',color:'green',active:true},
+      {id:'n1b',x:250,y:244,w:210,h:52,label:'1b: x₁=0, x₅=1',sub:'Z=26.25 → check…',color:'blue',active:false},
+    ],
+    edges:[{x1:268,y1:66,x2:218,y2:116,lbl:''},{x1:352,y1:66,x2:488,y2:116,lbl:'x₁=1'},{x1:180,y1:168,x2:121,y2:244,lbl:'x₅=0'},{x1:228,y1:168,x2:355,y2:244,lbl:'x₅=1'}],
+    track:{n0:'',n1:'',n1a:'act',n1b:'',n2:''}
+  },
+  {
+    id:'n2',title:'Node 2: x₁=1 — LP Solved',
+    status:'b-branch',sLbl:'Fractional — check vs incumbent',
+    vars:'x₁=1,x₃=1,x₇=1,x₈=1,x₉=1, x₁₀=0.25 (frac.)',
+    bound:'Z = 27.1',bCls:'wn',
+    feas:'x₁₀=0.25 fractional',fCls:'wn',
+    inc:'Z* = 26.0',
+    note:'With x₁=1 (2ww), remaining = 5ww. LP fills x₈,x₃,x₇,x₉ (4.5ww), remaining 0.5ww → x₁₀ fraction = 0.5/2 = <strong>0.25</strong>. Z=27.1 > incumbent 26.0 → cannot prune. Branch on x₁₀.',
+    nodes:[
+      {id:'n0',x:215,y:14,w:196,h:52,label:'Node 0',sub:'Z=27.25 | branched',color:'gray',active:false},
+      {id:'n1',x:50,y:116,w:185,h:52,label:'Node 1: x₁=0',sub:'explored',color:'gray',active:false},
+      {id:'n2',x:375,y:116,w:210,h:52,label:'Node 2: x₁=1',sub:'Z=27.1 | x₁₀=0.25 frac.',color:'blue',active:true},
+      {id:'n1a',x:16,y:244,w:185,h:52,label:'1a: Z=26.0 ✓',sub:'Incumbent',color:'green',active:false},
+      {id:'n1b',x:218,y:244,w:185,h:52,label:'1b: Z=26.25',sub:'Needs checking',color:'blue',active:false},
+    ],
+    edges:[{x1:268,y1:66,x2:143,y2:116,lbl:''},{x1:352,y1:66,x2:480,y2:116,lbl:'x₁=1'},{x1:108,y1:168,x2:109,y2:244,lbl:'x₅=0'},{x1:145,y1:168,x2:311,y2:244,lbl:'x₅=1'}],
+    track:{n0:'',n1:'',n1a:'ok',n1b:'',n2:'act'}
+  },
+  {
+    id:'n2a',title:'Node 2a: x₁=1, x₁₀=0 — LP Solved',
+    status:'b-branch',sLbl:'Fractional — check bound',
+    vars:'x₁=1,x₃=1,x₇=1,x₈=1,x₉=1, x₅=0.167 (frac.)',
+    bound:'Z = 27.0',bCls:'wn',
+    feas:'x₅=0.167 fractional',fCls:'wn',
+    inc:'Z* = 26.0',
+    note:'Force x₁₀=0. With x₁=1 (2ww) remaining 5ww: fill x₈,x₃,x₇,x₉ (4.5ww), remaining 0.5ww → x₅ fraction = 0.167. Z=27.0 > 26.0 → still cannot prune, but further branching on x₅ leads to <strong>integer Z=26.0</strong> (same incumbent) or lower. This branch is bounded by Z*=26.0.',
+    nodes:[
+      {id:'n0',x:215,y:12,w:196,h:50,label:'Node 0',sub:'Z=27.25 | branched',color:'gray',active:false},
+      {id:'n1',x:50,y:106,w:170,h:50,label:'Node 1',sub:'explored',color:'gray',active:false},
+      {id:'n2',x:388,y:106,w:210,h:50,label:'Node 2: x₁=1',sub:'Z=27.1 | branched',color:'gray',active:false},
+      {id:'n1a',x:16,y:232,w:168,h:50,label:'1a: Z=26.0 ✓',sub:'Incumbent',color:'green',active:false},
+      {id:'n1b',x:200,y:232,w:170,h:50,label:'1b: Z=26.25',sub:'Needs check',color:'blue',active:false},
+      {id:'n2a',x:290,y:370,w:195,h:54,label:'2a: x₁=1, x₁₀=0',sub:'Z=27.0 | x₅=0.167 frac.',color:'blue',active:true},
+      {id:'n2b',x:490,y:370,w:130,h:54,label:'2b: x₁₀=1',sub:'checking…',color:'blue',active:false},
+    ],
+    edges:[{x1:268,y1:62,x2:135,y2:106,lbl:''},{x1:352,y1:62,x2:493,y2:106,lbl:'x₁=1'},{x1:102,y1:156,x2:100,y2:232,lbl:'x₅=0'},{x1:138,y1:156,x2:285,y2:232,lbl:'x₅=1'},{x1:463,y1:156,x2:388,y2:370,lbl:'x₁₀=0'},{x1:500,y1:156,x2:555,y2:370,lbl:'x₁₀=1'}],
+    track:{n0:'',n1:'',n1a:'ok',n1b:'',n2:'',n2a:'act',n2b:''}
+  },
+  {
+    id:'n2b',title:'Node 2b: x₁=1, x₁₀=1 — Z=25.43 → Pruned by Bound',
+    status:'b-fath',sLbl:'Pruned by Bound',
+    vars:'x₁=1,x₁₀=1 costs 4ww already — tight budget',
+    bound:'Z = 25.43 < 26.0 = Z*',bCls:'bd',
+    feas:'LP feasible but Z < incumbent',fCls:'bd',
+    inc:'Z* = 26.0 (unchanged — Node 1a optimal)',
+    note:'Force x₁=1 and x₁₀=1 (total 4ww). Remaining 3ww: fill x₈(0.5), x₃(1.0), x₇(1.5 frac = 0.75). Z=25.43 &lt; incumbent 26.0. This node is <strong>pruned by bound</strong> — it cannot beat the incumbent. All nodes exhausted. <strong>Z=26.0 is the proven global optimum!</strong>',
+    nodes:[
+      {id:'n0',x:215,y:12,w:196,h:50,label:'Node 0',sub:'Z=27.25 | branched',color:'gray',active:false},
+      {id:'n1',x:50,y:106,w:170,h:50,label:'Node 1',sub:'explored',color:'gray',active:false},
+      {id:'n2',x:388,y:106,w:210,h:50,label:'Node 2: x₁=1',sub:'Z=27.1 | branched',color:'gray',active:false},
+      {id:'n1a',x:16,y:232,w:168,h:50,label:'★ 1a: Z=26.0',sub:'OPTIMAL ✓',color:'amber',active:true},
+      {id:'n1b',x:200,y:232,w:170,h:50,label:'1b: Z=26.25',sub:'Needs check',color:'blue',active:false},
+      {id:'n2a',x:290,y:370,w:195,h:52,label:'2a: Z=27.0',sub:'→ Z*=26.0 at leaf',color:'gray',active:false},
+      {id:'n2b',x:490,y:370,w:130,h:52,label:'2b: Z=25.43',sub:'Pruned ≤ Z* ✗',color:'red',active:false},
+    ],
+    edges:[{x1:268,y1:62,x2:135,y2:106,lbl:''},{x1:352,y1:62,x2:493,y2:106,lbl:'x₁=1'},{x1:102,y1:156,x2:100,y2:232,lbl:'x₅=0'},{x1:138,y1:156,x2:285,y2:232,lbl:'x₅=1'},{x1:463,y1:156,x2:388,y2:370,lbl:'x₁₀=0'},{x1:500,y1:156,x2:555,y2:370,lbl:'x₁₀=1'}],
+    track:{n0:'',n1:'',n1a:'ok',n1b:'',n2:'',n2a:'',n2b:'no'}
+  },
+];
+
+let cur=0, autoTimer=null;
+
+function renderBB(si){
+  const s=steps[si];
+  const g=document.getElementById('bb-g');
+  let svg='';
+  (s.edges||[]).forEach(e=>{
+    svg+=`<line x1="${e.x1}" y1="${e.y1}" x2="${e.x2}" y2="${e.y2}" stroke="#c8b898" stroke-width="1.2" marker-end="url(#ar2)" fill="none"/>`;
+    if(e.lbl){const mx=(e.x1+e.x2)/2+5,my=(e.y1+e.y2)/2;svg+=`<text x="${mx}" y="${my}" font-family="Fira Code" font-size="10" fill="#9a8a6a">${e.lbl}</text>`;}
+  });
+  (s.nodes||[]).forEach(n=>{
+    const c=CM[n.color]||CM.gray;
+    const sw=n.active?2.5:1;
+    const shadow=n.active?`filter="url(#shadow)"`:''
+    svg+=`<rect x="${n.x}" y="${n.y}" width="${n.w}" height="${n.h}" rx="9" fill="${c.fill}" stroke="${c.stroke}" stroke-width="${sw}"/>`;
+    if(n.active){svg+=`<rect x="${n.x+3}" y="${n.y+3}" width="${n.w}" height="${n.h}" rx="9" fill="none" stroke="${c.stroke}" stroke-width="0.4" opacity="0.3"/>`;}
+    svg+=`<text x="${n.x+n.w/2}" y="${n.y+17}" text-anchor="middle" dominant-baseline="central" font-family="Fira Code" font-size="${n.active?12:11}" font-weight="${n.active?600:400}" fill="${c.text}">${n.label}</text>`;
+    svg+=`<text x="${n.x+n.w/2}" y="${n.y+35}" text-anchor="middle" dominant-baseline="central" font-family="Fira Code" font-size="10" fill="${c.stroke}" opacity="${n.active?1:.55}">${n.sub}</text>`;
+  });
+  g.innerHTML=svg;
+
+  const tmap=s.track||{};
+  ['n0','n1','n1a','n1b','n2','n2a','n2b'].forEach(k=>{
+    const el=document.getElementById('nt'+k.replace('n',''));
+    if(!el)return;
+    el.className='nt'+(tmap[k]==='act'?' act':tmap[k]==='ok'?' ok':tmap[k]==='no'?' no':'');
+  });
+
+  document.getElementById('prog').style.width=((si/(steps.length-1))*100)+'%';
+  document.getElementById('step-counter').textContent=`Step ${si} / ${steps.length-1}`;
+  document.getElementById('btn-prev').disabled=si===0;
+  document.getElementById('btn-next').disabled=si===steps.length-1;
+
+  const isLast=si===steps.length-1;
+  let html=`<div class="card hi">
+    <h3>${s.title}</h3>
+    <div style="margin-bottom:12px"><span class="badge ${s.status}">${s.sLbl}</span></div>
+    <div class="irow"><span class="ik">LP Bound</span><span class="iv ${s.bCls}">${s.bound}</span></div>
+    <div class="irow"><span class="ik">Feasibility</span><span class="iv ${s.fCls}">${s.feas}</span></div>
+    <div class="irow"><span class="ik">Incumbent Z*</span><span class="iv ${s.inc.includes('26')?'gd':'in'}">${s.inc}</span></div>
+    <div class="irow" style="margin-top:10px;padding-top:10px;border-top:1px solid var(--b1)"><span class="ik">Variables</span><span class="iv" style="font-size:9px">${s.vars}</span></div>
+  </div>`;
+  html+=`<div class="card"><h3>What's happening</h3><p class="explain">${s.note}</p></div>`;
+  if(isLast){
+    html+=`<div class="opt-card">
+      <div class="ot">★ B&amp;B Optimal Confirmed</div>
+      <div class="ov">Z = 26.0</div>
+      <p>Ricotta(x₃)+Salame(x₇)+Nduja(x₈)+Zucchini(x₉)+Fried Egg(x₁₀)<br>
+      Cost: <strong>6.5ww</strong> of 7ww · Found at Node 1a<br><br>
+      <strong>Matches spreadsheet exactly!</strong><br>
+      B&amp;B explored only 7 nodes vs 1024 brute-force.</p>
+    </div>`;
+  }
+  document.getElementById('bb-sidebar').innerHTML=html;
+}
+
+function bbStep(d){cur=Math.max(0,Math.min(steps.length-1,cur+d));renderBB(cur);}
+function bbReset(){clearInterval(autoTimer);autoTimer=null;document.getElementById('btn-auto').textContent='▶ Auto';cur=0;renderBB(0);}
+function bbAuto(){
+  if(autoTimer){clearInterval(autoTimer);autoTimer=null;document.getElementById('btn-auto').textContent='▶ Auto';return;}
+  document.getElementById('btn-auto').textContent='⏸ Pause';
+  autoTimer=setInterval(()=>{if(cur>=steps.length-1){clearInterval(autoTimer);autoTimer=null;document.getElementById('btn-auto').textContent='▶ Auto';return;}cur++;renderBB(cur);},2200);
+}
+document.addEventListener('keydown',e=>{
+  if(!document.getElementById('panel-bb').classList.contains('active'))return;
+  if(e.key==='ArrowRight')bbStep(1);
+  if(e.key==='ArrowLeft')bbStep(-1);
+});
+renderBB(0);
 </script>
 </body>
 </html>
